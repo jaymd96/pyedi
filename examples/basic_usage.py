@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Basic Usage Examples for X12 EDI Converter
+Basic Usage Examples for PyEDI
 
-This file demonstrates the basic usage patterns for the x12_edi_converter package.
+This file demonstrates the basic usage patterns for the pyedi package.
 """
 
-from x12_edi_converter import X12Pipeline, X12Parser, StructuredFormatter, SchemaMapper
-from x12_edi_converter import MappingBuilder, load_mapping_definition
+from pyedi import X12Pipeline, X12Parser, StructuredFormatter, SchemaMapper
+from pyedi import MappingBuilder, load_mapping_definition
 import json
 
 
@@ -245,7 +245,7 @@ if __name__ == "__main__":
     # Note: These examples assume you have sample EDI files and mapping definitions
     # in the appropriate directories. Adjust paths as needed.
 
-    print("\nX12 EDI Converter - Usage Examples\n")
+    print("\nPyEDI - Usage Examples\n")
 
     # Uncomment the examples you want to run:
 

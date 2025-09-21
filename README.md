@@ -43,7 +43,7 @@ pip install pyedi[dev]
 ### Simple Usage
 
 ```python
-from x12_edi_converter import X12Pipeline
+from pyedi import X12Pipeline
 
 # Create pipeline
 pipeline = X12Pipeline()
@@ -60,7 +60,7 @@ print(result)
 ### Step-by-Step Processing
 
 ```python
-from x12_edi_converter import X12Parser, StructuredFormatter, SchemaMapper
+from pyedi import X12Parser, StructuredFormatter, SchemaMapper
 
 # Step 1: Parse EDI to generic JSON
 parser = X12Parser()
@@ -82,7 +82,7 @@ target_json = mapper.map(structured_json)
 Parses X12 EDI files into generic JSON format while preserving all contextual information.
 
 ```python
-from x12_edi_converter import X12Parser
+from pyedi import X12Parser
 
 parser = X12Parser()
 generic_json = parser.parse("input.edi")
@@ -99,7 +99,7 @@ generic_json = parser.parse("input.edi")
 Transforms generic JSON into a structured format with meaningful field names and code descriptions.
 
 ```python
-from x12_edi_converter import StructuredFormatter
+from pyedi import StructuredFormatter
 
 formatter = StructuredFormatter()
 structured_json = formatter.format(generic_json, include_technical=True)
@@ -116,7 +116,7 @@ structured_json = formatter.format(generic_json, include_technical=True)
 Maps structured JSON to target schemas using JSONata expressions.
 
 ```python
-from x12_edi_converter import SchemaMapper
+from pyedi import SchemaMapper
 
 mapper = SchemaMapper(mapping_definition)
 target_json = mapper.map(structured_json)
@@ -133,7 +133,7 @@ target_json = mapper.map(structured_json)
 ### Using MappingBuilder
 
 ```python
-from x12_edi_converter import MappingBuilder
+from pyedi import MappingBuilder
 
 # Create builder
 builder = MappingBuilder("my_mapping", mapping_type="only_mapped")
@@ -355,4 +355,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-Made with ❤️ by Harmony Health
+Built for the healthcare development community

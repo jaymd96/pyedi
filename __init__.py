@@ -1,5 +1,5 @@
 """
-X12 EDI Converter Package
+PyEDI - Python X12 EDI Parser and Transformer
 
 A comprehensive Python package for parsing, transforming, and mapping X12 EDI files
 to various target schemas using JSONata expressions.
@@ -11,13 +11,13 @@ Main Components:
     - X12Pipeline: Complete transformation pipeline
 
 Basic Usage:
-    from x12_edi_converter import X12Pipeline
+    from pyedi import X12Pipeline
 
     pipeline = X12Pipeline()
     result = pipeline.transform("input.edi", mapping="mapping.json")
 
 Advanced Usage:
-    from x12_edi_converter import X12Parser, StructuredFormatter, SchemaMapper
+    from pyedi import X12Parser, StructuredFormatter, SchemaMapper
 
     # Step-by-step processing
     parser = X12Parser()
@@ -32,7 +32,6 @@ Advanced Usage:
 
 __version__ = "1.0.0"
 __author__ = "James"
-__email__ = "james@harmonyhealth.com"
 
 # Core components
 from .core.parser import X12Parser

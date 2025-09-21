@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Custom Mapping Examples for X12 EDI Converter
+Custom Mapping Examples for PyEDI
 
 This file demonstrates how to create custom mappings for different use cases.
 """
 
-from x12_edi_converter import MappingBuilder, X12Pipeline
+from pyedi import MappingBuilder, X12Pipeline
 import json
 
 
@@ -294,7 +294,7 @@ def test_custom_mapping():
 
 
 if __name__ == "__main__":
-    print("Custom Mapping Examples for X12 EDI Converter\n")
+    print("Custom Mapping Examples for PyEDI\n")
     print("=" * 60)
 
     # Test a custom mapping

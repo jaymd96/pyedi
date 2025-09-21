@@ -28,7 +28,7 @@ setup(
     name="pyedi",
     version=version,
     author="James",
-    author_email="james@harmonyhealth.com",
+    author_email="",
     description="A comprehensive Python package for parsing, transforming, and mapping X12 EDI files",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -47,7 +47,7 @@ setup(
         "Programming Language :: Python :: 3.12",
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Topic :: Text Processing :: Markup",
-        "Topic :: Office/Business :: Financial :: Medical",
+        "Topic :: Office/Business :: Financial",
     ],
     python_requires=">=3.8",
     install_requires=[
