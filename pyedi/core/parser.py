@@ -110,7 +110,8 @@ class X12Parser:
             "functional_group": None,
             "interchange": {},
             "functional_groups": [],
-            "transactions": []
+            "transactions": [],
+            "map_file": None  # Store the map file for element name lookups
         }
 
         # Current context
@@ -154,6 +155,7 @@ class X12Parser:
                     current_map = pyx12.map_if.load_map_file(map_file, self.param, self.map_path)
                     src.check_837_lx = True if current_map.id == '837' else False
                     node = current_map.getnodebypath('/ISA_LOOP/GS_LOOP/GS')
+                    result['map_file'] = map_file  # Store the map file name
 
                 current_functional_group = self._create_functional_group_json(seg)
                 result['functional_groups'].append(current_functional_group)
@@ -387,6 +389,13 @@ class X12Parser:
                     loop_id = parent.id
                     segment_json['loop_id'] = parent.id
                     segment_json['loop_name'] = parent.name
+
+                    # Add loop metadata for determining if it can repeat
+                    if hasattr(parent, 'max_use'):
+                        segment_json['loop_max_use'] = parent.max_use
+                    if hasattr(parent, 'usage'):
+                        segment_json['loop_usage'] = parent.usage
+
                     break
                 parent = parent.parent
 
@@ -410,9 +419,12 @@ class X12Parser:
                 elem_node = None
                 if node and hasattr(node, 'get_child_node_by_idx'):
                     try:
+                        # Use idx directly as get_child_node_by_idx expects 0-based index
                         elem_node = node.get_child_node_by_idx(idx)
-                    except:
-                        pass
+                        if elem_node and hasattr(elem_node, 'name'):
+                            self.logger.debug(f"Found element name for {ele_id}: {elem_node.name}")
+                    except Exception as e:
+                        self.logger.debug(f"Could not get element node for {ele_id}: {e}")
 
                 # Handle composite elements
                 if hasattr(ele, 'elements') and len(ele.elements) > 1:
@@ -434,26 +446,16 @@ class X12Parser:
                             "value": value,
                             "name": elem_node.name
                         }
-                        # Add data element reference if available
+                        # Add additional metadata if available
                         if hasattr(elem_node, 'data_ele'):
                             segment_json['elements'][ele_id]['data_ele'] = elem_node.data_ele
+                        if hasattr(elem_node, 'data_type'):
+                            segment_json['elements'][ele_id]['data_type'] = elem_node.data_type
+                        if hasattr(elem_node, 'usage'):
+                            segment_json['elements'][ele_id]['usage'] = elem_node.usage
                     else:
                         # No metadata available, just store value
                         segment_json['elements'][ele_id] = value
-
-                    # Add metadata if node available
-                    if node:
-                        try:
-                            ele_node = node.get_child_node_by_ordinal(idx + 1)
-                            if ele_node:
-                                segment_json['elements'][ele_id] = {
-                                    "value": value,
-                                    "name": ele_node.name,
-                                    "data_type": ele_node.data_type,
-                                    "usage": ele_node.usage
-                                }
-                        except:
-                            pass
 
         return segment_json
 

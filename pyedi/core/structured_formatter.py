@@ -2,9 +2,8 @@
 """
 Structured EDI Formatter Module
 
-Transforms generic X12 JSON output into a structured format that preserves X12
-organization while adding meaningful field names and code descriptions.
-Leverages both pyx12's built-in names and custom code mappings.
+Transforms generic X12 JSON output into a structured format similar to Stedi's Guide JSON,
+preserving X12 structure while adding meaningful field names with position numbers.
 """
 
 import json
@@ -12,8 +11,10 @@ import logging
 from typing import Dict, Any, List, Optional, Union
 from collections import OrderedDict
 from datetime import datetime
+import re
 
 from ..code_sets import edi_codes as codes
+from .map_loader import MapElementLoader
 
 
 class StructuredFormatter:
@@ -21,6 +22,7 @@ class StructuredFormatter:
 
     def __init__(self):
         self.logger = logging.getLogger(__name__)
+        self.map_loader = MapElementLoader()
 
     def format(self, generic_json: Dict[str, Any], include_technical: bool = True) -> Dict[str, Any]:
         """
@@ -28,888 +30,400 @@ class StructuredFormatter:
 
         Args:
             generic_json: Output from X12Parser
-            include_technical: Include original codes alongside descriptions
+            include_technical: Include original codes alongside descriptions (for compatibility)
 
         Returns:
-            Structured JSON with meaningful field names and preserved X12 organization
+            Structured JSON in Guide JSON format with descriptive field names and position numbers
         """
         try:
-            transaction_type = generic_json.get('transaction_type')
+            # Store transaction type and map file for element name lookups
+            self._current_transaction_type = generic_json.get('transaction_type')
+            self._current_map_file = generic_json.get('map_file')
 
-            if transaction_type == '835':
-                return self._transform_835(generic_json, include_technical)
-            elif transaction_type == '837':
-                return self._transform_837(generic_json, include_technical)
-            elif transaction_type == '834':
-                return self._transform_834(generic_json, include_technical)
-            else:
-                # Default transformation for unknown types
-                return self._transform_generic(generic_json, include_technical)
+            # Get the first transaction
+            transactions = generic_json.get('transactions', [])
+            if not transactions:
+                return generic_json
+
+            transaction = transactions[0]
+            segments = transaction.get('segments', [])
+
+            # Build the structured output
+            result = OrderedDict()
+
+            # Add interchange and functional group metadata
+            result['interchange'] = self._format_interchange(generic_json)
+            result['functional_group'] = self._format_functional_group(generic_json)
+
+            # Group segments into heading and detail sections
+            heading_segments, detail_segments = self._partition_segments(segments)
+
+            # Process heading section
+            if heading_segments:
+                result['heading'] = self._process_segment_group(heading_segments)
+
+            # Process detail section
+            if detail_segments:
+                result['detail'] = self._process_segment_group(detail_segments)
+
+            # Add transaction type for convenience
+            result['transaction_type'] = self._current_transaction_type
+
+            return result
 
         except Exception as e:
-            self.logger.error(f"Error transforming to human-readable format: {e}", exc_info=True)
+            self.logger.error(f"Error transforming to structured format: {e}", exc_info=True)
             return generic_json
 
-    def _transform_835(self, generic_json: Dict[str, Any], include_technical: bool) -> Dict[str, Any]:
-        """Transform 835 Remittance Advice to human-readable format"""
-
-        result = OrderedDict()
-        result['transaction_type'] = '835_remittance_advice'
-        result['metadata'] = self._transform_interchange_metadata(generic_json)
-
-        # Get segments from first transaction
-        segments = generic_json.get('transactions', [{}])[0].get('segments', [])
-
-        # Process segments by type
-        segment_map = self._build_segment_map(segments)
-
-        # Financial Information (BPR segment)
-        if 'BPR' in segment_map:
-            result['payment_information'] = self._transform_bpr_segment(
-                segment_map['BPR'][0], include_technical
-            )
-
-        # Trace Information (TRN segment)
-        if 'TRN' in segment_map:
-            trn = segment_map['TRN'][0]
-            result['trace_information'] = self._transform_trn_segment(trn, include_technical)
-
-        # Payer Information
-        payer_segments = self._get_loop_segments(segments, '1000A')
-        if payer_segments:
-            result['payer'] = self._transform_entity_loop(payer_segments, 'PR', include_technical)
-
-        # Payee Information
-        payee_segments = self._get_loop_segments(segments, '1000B')
-        if payee_segments:
-            result['payee'] = self._transform_entity_loop(payee_segments, 'PE', include_technical)
-
-        # Claims
-        result['claims'] = self._transform_835_claims(segments, include_technical)
-
-        # Provider Adjustments (PLB segments)
-        if 'PLB' in segment_map:
-            result['provider_adjustments'] = [
-                self._transform_plb_segment(plb, include_technical)
-                for plb in segment_map['PLB']
-            ]
-
-        # Summary
-        result['summary'] = self._build_835_summary(result)
-
-        return result
-
-    def _transform_837(self, generic_json: Dict[str, Any], include_technical: bool) -> Dict[str, Any]:
-        """Transform 837 Professional Claim to human-readable format"""
-
-        result = OrderedDict()
-        result['transaction_type'] = '837_professional_claim'
-        result['metadata'] = self._transform_interchange_metadata(generic_json)
-
-        # Get segments from first transaction
-        segments = generic_json.get('transactions', [{}])[0].get('segments', [])
-
-        # Process segments by type
-        segment_map = self._build_segment_map(segments)
-
-        # Transaction header (BHT segment)
-        if 'BHT' in segment_map:
-            result['transaction_header'] = self._transform_bht_segment(
-                segment_map['BHT'][0], include_technical
-            )
-
-        # Submitter Information
-        submitter_segments = self._get_loop_segments(segments, '1000A')
-        if submitter_segments:
-            result['submitter'] = self._transform_entity_loop(submitter_segments, '41', include_technical)
-
-        # Receiver Information
-        receiver_segments = self._get_loop_segments(segments, '1000B')
-        if receiver_segments:
-            result['receiver'] = self._transform_entity_loop(receiver_segments, '40', include_technical)
-
-        # Billing Provider
-        billing_segments = self._get_loop_segments(segments, '2010AA')
-        if billing_segments:
-            result['billing_provider'] = self._transform_entity_loop(billing_segments, '85', include_technical)
-
-        # Claims
-        result['claims'] = self._transform_837_claims(segments, generic_json.get('transactions', [{}])[0].get('hierarchical_tree', {}), include_technical)
-
-        return result
-
-    def _transform_834(self, generic_json: Dict[str, Any], include_technical: bool) -> Dict[str, Any]:
-        """Transform 834 Benefit Enrollment to human-readable format"""
-
-        result = OrderedDict()
-        result['transaction_type'] = '834_benefit_enrollment'
-        result['metadata'] = self._transform_interchange_metadata(generic_json)
-
-        # Get segments from first transaction
-        segments = generic_json.get('transactions', [{}])[0].get('segments', [])
-        segment_map = self._build_segment_map(segments)
-
-        # Beginning segment (BGN)
-        if 'BGN' in segment_map:
-            result['transaction_header'] = self._transform_bgn_segment(
-                segment_map['BGN'][0], include_technical
-            )
-
-        # Policy reference (REF)
-        if 'REF' in segment_map:
-            for ref in segment_map['REF']:
-                qualifier = self._get_element_value(ref, 'REF01')
-                if qualifier == '38':
-                    result['master_policy_number'] = self._get_element_value(ref, 'REF02')
-
-        # Sponsor Information (N1*P5)
-        for n1 in segment_map.get('N1', []):
-            entity_code = self._get_element_value(n1, 'N101')
-            if entity_code == 'P5':
-                result['plan_sponsor'] = {
-                    'name': self._get_element_value(n1, 'N102'),
-                    'identifier': self._get_element_value(n1, 'N104')
-                }
-            elif entity_code == 'IN':
-                result['payer'] = {
-                    'name': self._get_element_value(n1, 'N102'),
-                    'identifier': self._get_element_value(n1, 'N104')
-                }
-
-        # Member enrollments
-        result['members'] = self._transform_834_members(segments, include_technical)
-
-        return result
-
-    def _transform_generic(self, generic_json: Dict[str, Any], include_technical: bool) -> Dict[str, Any]:
-        """Default transformation for unknown transaction types"""
-
-        result = OrderedDict()
-        result['transaction_type'] = generic_json.get('transaction_type', 'unknown')
-        result['metadata'] = self._transform_interchange_metadata(generic_json)
-
-        # Get segments from first transaction
-        segments = generic_json.get('transactions', [{}])[0].get('segments', [])
-
-        # Group segments by type
-        result['segments'] = {}
-        for segment in segments:
-            seg_id = segment.get('segment_id')
-            seg_name = segment.get('segment_name', seg_id)
-
-            if seg_id not in result['segments']:
-                result['segments'][seg_id] = {
-                    'name': seg_name,
-                    'occurrences': []
-                }
-
-            # Transform elements
-            elements = self._transform_generic_elements(segment.get('elements', {}), include_technical)
-            result['segments'][seg_id]['occurrences'].append(elements)
-
-        return result
-
-    def _transform_interchange_metadata(self, generic_json: Dict[str, Any]) -> Dict[str, Any]:
-        """Transform interchange and functional group metadata"""
-
+    def _format_interchange(self, generic_json: Dict[str, Any]) -> Dict[str, Any]:
+        """Format interchange information"""
         interchange = generic_json.get('interchange', {})
-        functional_group = generic_json.get('functional_groups', [{}])[0]
-
         return {
-            'sender': {
-                'id': interchange.get('sender_id'),
-                'qualifier': interchange.get('sender_qualifier')
-            },
-            'receiver': {
-                'id': interchange.get('receiver_id'),
-                'qualifier': interchange.get('receiver_qualifier')
-            },
-            'interchange_date': self._format_date(interchange.get('date')),
-            'interchange_time': self._format_time(interchange.get('time')),
-            'interchange_control_number': interchange.get('control_number'),
-            'test_mode': interchange.get('test_indicator') == 'T',
-            'functional_group': {
-                'type': functional_group.get('functional_id'),
-                'sender': functional_group.get('sender_code'),
-                'receiver': functional_group.get('receiver_code'),
-                'date': self._format_date(functional_group.get('date')),
-                'time': self._format_time(functional_group.get('time')),
-                'control_number': functional_group.get('control_number'),
-                'version': functional_group.get('version')
-            }
+            'sender_id': interchange.get('sender_id'),
+            'sender_qualifier': interchange.get('sender_qualifier'),
+            'receiver_id': interchange.get('receiver_id'),
+            'receiver_qualifier': interchange.get('receiver_qualifier'),
+            'date': interchange.get('date'),
+            'time': interchange.get('time'),
+            'control_number': interchange.get('control_number'),
+            'version': interchange.get('version'),
+            'test_indicator': interchange.get('test_indicator')
         }
 
-    def _transform_bpr_segment(self, segment: Dict[str, Any], include_technical: bool) -> Dict[str, Any]:
-        """Transform BPR (Financial Information) segment"""
+    def _format_functional_group(self, generic_json: Dict[str, Any]) -> Dict[str, Any]:
+        """Format functional group information"""
+        groups = generic_json.get('functional_groups', [])
+        if not groups:
+            return {}
 
-        result = OrderedDict()
-
-        # Transaction handling code
-        handling_code = self._get_element_value(segment, 'BPR01')
-        result['transaction_handling'] = self._format_code_with_description(
-            handling_code,
-            codes.get_payment_method_description(handling_code),
-            include_technical
-        )
-
-        # Payment amount
-        amount = self._get_element_value(segment, 'BPR02')
-        if amount:
-            result['total_payment_amount'] = float(amount)
-
-        # Credit/Debit indicator
-        credit_debit = self._get_element_value(segment, 'BPR03')
-        if credit_debit:
-            result['credit_or_debit'] = self._format_code_with_description(
-                credit_debit,
-                codes.CREDIT_DEBIT_CODES.get(credit_debit, credit_debit),
-                include_technical
-            )
-
-        # Payment method
-        payment_method = self._get_element_value(segment, 'BPR04')
-        if payment_method:
-            result['payment_method'] = self._format_code_with_description(
-                payment_method,
-                codes.get_payment_method_description(payment_method),
-                include_technical
-            )
-
-        # Payment date
-        payment_date = self._get_element_value(segment, 'BPR16')
-        if payment_date:
-            result['payment_date'] = self._format_date(payment_date)
-
-        # Account information
-        if self._get_element_value(segment, 'BPR07'):
-            result['sender_bank_account'] = {
-                'routing_number': self._get_element_value(segment, 'BPR07'),
-                'account_number': self._get_element_value(segment, 'BPR09')
-            }
-
-        if self._get_element_value(segment, 'BPR13'):
-            result['receiver_bank_account'] = {
-                'routing_number': self._get_element_value(segment, 'BPR13'),
-                'account_number': self._get_element_value(segment, 'BPR15')
-            }
-
-        return result
-
-    def _transform_trn_segment(self, segment: Dict[str, Any], include_technical: bool) -> Dict[str, Any]:
-        """Transform TRN (Trace) segment"""
-
+        group = groups[0]
         return {
-            'trace_type': self._get_element_value(segment, 'TRN01'),
-            'check_or_eft_number': self._get_element_value(segment, 'TRN02'),
-            'originating_company_id': self._get_element_value(segment, 'TRN03'),
-            'originating_company_supplemental': self._get_element_value(segment, 'TRN04')
+            'functional_id': group.get('functional_id'),
+            'sender_code': group.get('sender_code'),
+            'receiver_code': group.get('receiver_code'),
+            'date': group.get('date'),
+            'time': group.get('time'),
+            'control_number': group.get('control_number'),
+            'version': group.get('version')
         }
 
-    def _transform_bht_segment(self, segment: Dict[str, Any], include_technical: bool) -> Dict[str, Any]:
-        """Transform BHT (Beginning of Hierarchical Transaction) segment"""
+    def _partition_segments(self, segments: List[Dict[str, Any]]) -> tuple:
+        """
+        Partition segments into heading and detail sections.
+        Heading typically includes setup segments like ST, BGN/BHT, N1 loops, etc.
+        Detail includes the main content like claims, members, service lines, etc.
+        """
+        heading_segments = []
+        detail_segments = []
+
+        # Common heading loop IDs and segment IDs
+        heading_loops = {'1000A', '1000B', '1000C'}  # Submitter, Receiver, etc.
+        heading_segment_ids = {'ST', 'BHT', 'BGN', 'BPR', 'TRN', 'CUR', 'REF', 'DTM', 'BGN'}
+
+        # Segments that typically start the detail section
+        detail_start_segments = {'CLP', 'CLM', 'INS', 'HL', 'LX'}
+
+        in_detail = False
 
-        return {
-            'hierarchical_structure': self._get_element_value(segment, 'BHT01'),
-            'transaction_purpose': self._get_element_value(segment, 'BHT02'),
-            'reference_number': self._get_element_value(segment, 'BHT03'),
-            'creation_date': self._format_date(self._get_element_value(segment, 'BHT04')),
-            'creation_time': self._format_time(self._get_element_value(segment, 'BHT05')),
-            'transaction_type': self._get_element_value(segment, 'BHT06')
-        }
-
-    def _transform_bgn_segment(self, segment: Dict[str, Any], include_technical: bool) -> Dict[str, Any]:
-        """Transform BGN (Beginning) segment"""
-
-        return {
-            'transaction_purpose': self._get_element_value(segment, 'BGN01'),
-            'reference_number': self._get_element_value(segment, 'BGN02'),
-            'creation_date': self._format_date(self._get_element_value(segment, 'BGN03')),
-            'creation_time': self._format_time(self._get_element_value(segment, 'BGN04')),
-            'action_code': self._get_element_value(segment, 'BGN08')
-        }
-
-    def _transform_plb_segment(self, segment: Dict[str, Any], include_technical: bool) -> Dict[str, Any]:
-        """Transform PLB (Provider Level Balance) segment"""
-
-        result = {
-            'provider_id': self._get_element_value(segment, 'PLB01'),
-            'fiscal_period_date': self._format_date(self._get_element_value(segment, 'PLB02')),
-            'adjustments': []
-        }
-
-        # Process up to 6 adjustment pairs
-        for i in range(3, 14, 2):
-            adj_id = self._get_element_value(segment, f'PLB{str(i).zfill(2)}')
-            adj_amount = self._get_element_value(segment, f'PLB{str(i+1).zfill(2)}')
-
-            if adj_id:
-                # Handle composite identifiers
-                if isinstance(adj_id, dict) and adj_id.get('composite'):
-                    components = adj_id.get('components', [])
-                    adj_code = components[0] if components else None
-                    reference = components[1] if len(components) > 1 else None
-                else:
-                    adj_code = adj_id
-                    reference = None
-
-                adjustment = {
-                    'adjustment_code': self._format_code_with_description(
-                        adj_code,
-                        codes.PLB_ADJUSTMENT_CODES.get(adj_code, f"Adjustment {adj_code}"),
-                        include_technical
-                    ),
-                    'amount': float(adj_amount) if adj_amount else 0.0
-                }
-
-                if reference:
-                    adjustment['reference_id'] = reference
-
-                result['adjustments'].append(adjustment)
-
-        return result
-
-    def _transform_entity_loop(self, segments: List[Dict[str, Any]], entity_type: str, include_technical: bool) -> Dict[str, Any]:
-        """Transform entity loop (N1, N3, N4, PER segments)"""
-
-        result = OrderedDict()
-
-        # N1 segment
-        n1_segment = next((s for s in segments if s.get('segment_id') == 'N1'), None)
-        if n1_segment:
-            entity_code = self._get_element_value(n1_segment, 'N101')
-            result['entity_type'] = self._format_code_with_description(
-                entity_code,
-                codes.get_entity_description(entity_code),
-                include_technical
-            )
-            result['name'] = self._get_element_value(n1_segment, 'N102')
-
-            id_qualifier = self._get_element_value(n1_segment, 'N103')
-            id_value = self._get_element_value(n1_segment, 'N104')
-            if id_qualifier and id_value:
-                result['identification'] = {
-                    'qualifier': self._format_code_with_description(
-                        id_qualifier,
-                        codes.ID_CODE_QUALIFIERS.get(id_qualifier, id_qualifier),
-                        include_technical
-                    ),
-                    'value': id_value
-                }
-
-        # NM1 segment (alternative to N1)
-        nm1_segment = next((s for s in segments if s.get('segment_id') == 'NM1'), None)
-        if nm1_segment and not n1_segment:
-            entity_code = self._get_element_value(nm1_segment, 'NM101')
-            result['entity_type'] = self._format_code_with_description(
-                entity_code,
-                codes.get_entity_description(entity_code),
-                include_technical
-            )
-
-            # Organization or individual name
-            if self._get_element_value(nm1_segment, 'NM102') == '2':
-                result['organization_name'] = self._get_element_value(nm1_segment, 'NM103')
-            else:
-                result['last_name'] = self._get_element_value(nm1_segment, 'NM103')
-                result['first_name'] = self._get_element_value(nm1_segment, 'NM104')
-                result['middle_name'] = self._get_element_value(nm1_segment, 'NM105')
-                result['suffix'] = self._get_element_value(nm1_segment, 'NM107')
-
-            id_qualifier = self._get_element_value(nm1_segment, 'NM108')
-            id_value = self._get_element_value(nm1_segment, 'NM109')
-            if id_qualifier and id_value:
-                result['identification'] = {
-                    'qualifier': self._format_code_with_description(
-                        id_qualifier,
-                        codes.ID_CODE_QUALIFIERS.get(id_qualifier, id_qualifier),
-                        include_technical
-                    ),
-                    'value': id_value
-                }
-
-        # Address segments (N3, N4)
-        n3_segment = next((s for s in segments if s.get('segment_id') == 'N3'), None)
-        n4_segment = next((s for s in segments if s.get('segment_id') == 'N4'), None)
-
-        if n3_segment or n4_segment:
-            address = OrderedDict()
-            if n3_segment:
-                address['street_1'] = self._get_element_value(n3_segment, 'N301')
-                address['street_2'] = self._get_element_value(n3_segment, 'N302')
-            if n4_segment:
-                address['city'] = self._get_element_value(n4_segment, 'N401')
-                address['state'] = self._get_element_value(n4_segment, 'N402')
-                address['postal_code'] = self._get_element_value(n4_segment, 'N403')
-                address['country'] = self._get_element_value(n4_segment, 'N404')
-            result['address'] = address
-
-        # Contact information (PER segment)
-        per_segment = next((s for s in segments if s.get('segment_id') == 'PER'), None)
-        if per_segment:
-            contact = OrderedDict()
-            contact['function'] = self._get_element_value(per_segment, 'PER01')
-            contact['name'] = self._get_element_value(per_segment, 'PER02')
-
-            # Process up to 3 contact methods
-            for i in range(3, 9, 2):
-                qualifier = self._get_element_value(per_segment, f'PER{str(i).zfill(2)}')
-                value = self._get_element_value(per_segment, f'PER{str(i+1).zfill(2)}')
-
-                if qualifier and value:
-                    if qualifier == 'TE':
-                        contact['telephone'] = value
-                    elif qualifier == 'FX':
-                        contact['fax'] = value
-                    elif qualifier == 'EM':
-                        contact['email'] = value
-                    elif qualifier == 'EX':
-                        contact['extension'] = value
-
-            result['contact'] = contact
-
-        # Reference numbers (REF segments)
-        ref_segments = [s for s in segments if s.get('segment_id') == 'REF']
-        if ref_segments:
-            result['references'] = []
-            for ref in ref_segments:
-                qualifier = self._get_element_value(ref, 'REF01')
-                value = self._get_element_value(ref, 'REF02')
-                if qualifier and value:
-                    result['references'].append({
-                        'type': self._format_code_with_description(
-                            qualifier,
-                            codes.get_reference_qualifier_description(qualifier),
-                            include_technical
-                        ),
-                        'value': value
-                    })
-
-        return result
-
-    def _transform_835_claims(self, segments: List[Dict[str, Any]], include_technical: bool) -> List[Dict[str, Any]]:
-        """Transform 835 claims (CLP segments and related)"""
-
-        claims = []
-        clp_segments = [s for s in segments if s.get('segment_id') == 'CLP']
-
-        for clp in clp_segments:
-            claim = OrderedDict()
-
-            # Basic claim information
-            claim['patient_control_number'] = self._get_element_value(clp, 'CLP01')
-
-            status_code = self._get_element_value(clp, 'CLP02')
-            claim['claim_status'] = self._format_code_with_description(
-                status_code,
-                codes.get_claim_status_description(status_code),
-                include_technical
-            )
-
-            claim['total_charge_amount'] = self._safe_float(self._get_element_value(clp, 'CLP03'))
-            claim['total_paid_amount'] = self._safe_float(self._get_element_value(clp, 'CLP04'))
-            claim['patient_responsibility'] = self._safe_float(self._get_element_value(clp, 'CLP05'))
-
-            filing_code = self._get_element_value(clp, 'CLP06')
-            if filing_code:
-                claim['claim_filing_indicator'] = self._format_code_with_description(
-                    filing_code,
-                    codes.get_claim_filing_description(filing_code),
-                    include_technical
-                )
-
-            claim['payer_claim_number'] = self._get_element_value(clp, 'CLP07')
-
-            # Get claim loop instance
-            loop_instance = clp.get('loop_instance', 0)
-
-            # Get patient information for this claim
-            patient_segments = [
-                s for s in segments
-                if s.get('segment_id') == 'NM1'
-                and self._get_element_value(s, 'NM101') == 'QC'
-                and s.get('loop_instance') == loop_instance
-            ]
-
-            if patient_segments:
-                patient = patient_segments[0]
-                claim['patient'] = {
-                    'last_name': self._get_element_value(patient, 'NM103'),
-                    'first_name': self._get_element_value(patient, 'NM104'),
-                    'middle_name': self._get_element_value(patient, 'NM105'),
-                    'member_id': self._get_element_value(patient, 'NM109')
-                }
-
-            # Get service lines for this claim
-            service_lines = [
-                s for s in segments
-                if s.get('segment_id') == 'SVC'
-                and s.get('loop_instance') == loop_instance
-            ]
-
-            if service_lines:
-                claim['service_lines'] = []
-                for svc in service_lines:
-                    service = self._transform_service_line(svc, segments, loop_instance, include_technical)
-                    claim['service_lines'].append(service)
-
-            # Get claim adjustments
-            cas_segments = [
-                s for s in segments
-                if s.get('segment_id') == 'CAS'
-                and s.get('loop_id') == '2100'
-                and s.get('loop_instance') == loop_instance
-            ]
-
-            if cas_segments:
-                claim['claim_adjustments'] = [
-                    self._transform_cas_segment(cas, include_technical)
-                    for cas in cas_segments
-                ]
-
-            claims.append(claim)
-
-        return claims
-
-    def _transform_837_claims(self, segments: List[Dict[str, Any]], hl_tree: Dict[str, Any], include_technical: bool) -> List[Dict[str, Any]]:
-        """Transform 837 claims (CLM segments and related)"""
-
-        claims = []
-        clm_segments = [s for s in segments if s.get('segment_id') == 'CLM']
-
-        for clm in clm_segments:
-            claim = OrderedDict()
-
-            # Basic claim information
-            claim['claim_number'] = self._get_element_value(clm, 'CLM01')
-            claim['total_charge_amount'] = self._safe_float(self._get_element_value(clm, 'CLM02'))
-
-            # Get hierarchical context
-            hl_context = clm.get('hierarchical_context', {})
-            hl_id = hl_context.get('hl_id')
-
-            # Get subscriber/patient from hierarchical tree
-            if hl_id and hl_tree:
-                # Find subscriber segments using hierarchical context
-                subscriber_segments = [
-                    s for s in segments
-                    if s.get('segment_id') == 'NM1'
-                    and self._get_element_value(s, 'NM101') == 'IL'
-                    and s.get('hierarchical_context', {}).get('hl_id') == hl_id
-                ]
-
-                if subscriber_segments:
-                    subscriber = subscriber_segments[0]
-                    claim['subscriber'] = {
-                        'last_name': self._get_element_value(subscriber, 'NM103'),
-                        'first_name': self._get_element_value(subscriber, 'NM104'),
-                        'middle_name': self._get_element_value(subscriber, 'NM105'),
-                        'member_id': self._get_element_value(subscriber, 'NM109')
-                    }
-
-            # Get service lines
-            service_lines = [
-                s for s in segments
-                if s.get('segment_id') == 'SV1'
-                and s.get('hierarchical_context', {}).get('hl_id') == hl_id
-            ]
-
-            if service_lines:
-                claim['service_lines'] = []
-                for sv1 in service_lines:
-                    service = self._transform_sv1_segment(sv1, include_technical)
-                    claim['service_lines'].append(service)
-
-            claims.append(claim)
-
-        return claims
-
-    def _transform_834_members(self, segments: List[Dict[str, Any]], include_technical: bool) -> List[Dict[str, Any]]:
-        """Transform 834 member enrollments (INS segments and related)"""
-
-        members = []
-        ins_segments = [s for s in segments if s.get('segment_id') == 'INS']
-
-        for ins in ins_segments:
-            member = OrderedDict()
-
-            # Member indicator
-            member['member_indicator'] = self._format_code_with_description(
-                self._get_element_value(ins, 'INS01'),
-                codes.YES_NO_CODES.get(self._get_element_value(ins, 'INS01'), 'Unknown'),
-                include_technical
-            )
-
-            # Relationship
-            relationship_code = self._get_element_value(ins, 'INS02')
-            member['relationship'] = self._format_code_with_description(
-                relationship_code,
-                codes.get_relationship_description(relationship_code),
-                include_technical
-            )
-
-            # Maintenance type
-            member['maintenance_type'] = self._get_element_value(ins, 'INS03')
-            member['maintenance_reason'] = self._get_element_value(ins, 'INS04')
-            member['benefit_status'] = self._get_element_value(ins, 'INS05')
-
-            # Get loop instance for member-specific segments
-            loop_instance = ins.get('loop_instance', 0)
-
-            # Get member name
-            nm1_segments = [
-                s for s in segments
-                if s.get('segment_id') == 'NM1'
-                and self._get_element_value(s, 'NM101') == 'IL'
-                and s.get('loop_instance') == loop_instance
-            ]
-
-            if nm1_segments:
-                nm1 = nm1_segments[0]
-                member['name'] = {
-                    'last_name': self._get_element_value(nm1, 'NM103'),
-                    'first_name': self._get_element_value(nm1, 'NM104'),
-                    'middle_name': self._get_element_value(nm1, 'NM105'),
-                    'member_id': self._get_element_value(nm1, 'NM109')
-                }
-
-            # Get demographics
-            dmg_segments = [
-                s for s in segments
-                if s.get('segment_id') == 'DMG'
-                and s.get('loop_instance') == loop_instance
-            ]
-
-            if dmg_segments:
-                dmg = dmg_segments[0]
-                member['demographics'] = {
-                    'birth_date': self._format_date(self._get_element_value(dmg, 'DMG02')),
-                    'gender': self._format_code_with_description(
-                        self._get_element_value(dmg, 'DMG03'),
-                        codes.get_gender_description(self._get_element_value(dmg, 'DMG03')),
-                        include_technical
-                    )
-                }
-
-            members.append(member)
-
-        return members
-
-    def _transform_service_line(self, svc: Dict[str, Any], segments: List[Dict[str, Any]], loop_instance: int, include_technical: bool) -> Dict[str, Any]:
-        """Transform SVC (Service Line) segment"""
-
-        result = OrderedDict()
-
-        # Procedure code (composite)
-        svc01 = self._get_element_value(svc, 'SVC01')
-        if isinstance(svc01, dict) and svc01.get('composite'):
-            components = svc01.get('components', [])
-            if len(components) > 0:
-                result['product_qualifier'] = components[0]
-            if len(components) > 1:
-                result['procedure_code'] = components[1]
-            if len(components) > 2:
-                result['modifiers'] = [c for c in components[2:] if c]
-        else:
-            result['procedure_code'] = svc01
-
-        # Amounts
-        result['charge_amount'] = self._safe_float(self._get_element_value(svc, 'SVC02'))
-        result['paid_amount'] = self._safe_float(self._get_element_value(svc, 'SVC03'))
-        result['revenue_code'] = self._get_element_value(svc, 'SVC04')
-        result['units_paid'] = self._safe_float(self._get_element_value(svc, 'SVC05'))
-
-        # Get service dates
-        service_dtm = [
-            s for s in segments
-            if s.get('segment_id') == 'DTM'
-            and s.get('loop_id') == '2110'
-            and s.get('loop_instance') == loop_instance
-        ]
-
-        if service_dtm:
-            dates = {}
-            for dtm in service_dtm:
-                qualifier = self._get_element_value(dtm, 'DTM01')
-                date_value = self._get_element_value(dtm, 'DTM02')
-                if qualifier == '472':
-                    dates['service_date'] = self._format_date(date_value)
-                elif qualifier == '150':
-                    dates['service_period_start'] = self._format_date(date_value)
-                elif qualifier == '151':
-                    dates['service_period_end'] = self._format_date(date_value)
-            if dates:
-                result['dates'] = dates
-
-        # Get service adjustments
-        service_cas = [
-            s for s in segments
-            if s.get('segment_id') == 'CAS'
-            and s.get('loop_id') == '2110'
-            and s.get('loop_instance') == loop_instance
-        ]
-
-        if service_cas:
-            result['adjustments'] = [
-                self._transform_cas_segment(cas, include_technical)
-                for cas in service_cas
-            ]
-
-        return result
-
-    def _transform_sv1_segment(self, sv1: Dict[str, Any], include_technical: bool) -> Dict[str, Any]:
-        """Transform SV1 (Professional Service) segment"""
-
-        result = OrderedDict()
-
-        # Procedure code (composite)
-        sv101 = self._get_element_value(sv1, 'SV101')
-        if isinstance(sv101, dict) and sv101.get('composite'):
-            components = sv101.get('components', [])
-            if len(components) > 0:
-                result['product_qualifier'] = components[0]
-            if len(components) > 1:
-                result['procedure_code'] = components[1]
-            if len(components) > 2:
-                result['modifiers'] = [c for c in components[2:] if c]
-        else:
-            result['procedure_code'] = sv101
-
-        # Amounts and units
-        result['charge_amount'] = self._safe_float(self._get_element_value(sv1, 'SV102'))
-        result['unit_type'] = self._get_element_value(sv1, 'SV103')
-        result['units'] = self._safe_float(self._get_element_value(sv1, 'SV104'))
-        result['place_of_service'] = self._get_element_value(sv1, 'SV105')
-
-        # Diagnosis code pointers
-        diagnosis_pointers = self._get_element_value(sv1, 'SV107')
-        if diagnosis_pointers:
-            if isinstance(diagnosis_pointers, dict) and diagnosis_pointers.get('composite'):
-                result['diagnosis_pointers'] = diagnosis_pointers.get('components', [])
-            else:
-                result['diagnosis_pointers'] = [diagnosis_pointers]
-
-        return result
-
-    def _transform_cas_segment(self, cas: Dict[str, Any], include_technical: bool) -> Dict[str, Any]:
-        """Transform CAS (Claim Adjustment) segment"""
-
-        result = OrderedDict()
-
-        # Adjustment group
-        group_code = self._get_element_value(cas, 'CAS01')
-        result['adjustment_group'] = self._format_code_with_description(
-            group_code,
-            codes.get_adjustment_group_description(group_code),
-            include_technical
-        )
-
-        # Process up to 6 adjustment reasons
-        result['reasons'] = []
-        for i in range(1, 7):
-            reason_field = f'CAS{str(i*2).zfill(2)}'
-            amount_field = f'CAS{str(i*2+1).zfill(2)}'
-
-            reason_code = self._get_element_value(cas, reason_field)
-            amount = self._get_element_value(cas, amount_field)
-
-            if reason_code:
-                reason = {
-                    'code': self._format_code_with_description(
-                        reason_code,
-                        codes.get_adjustment_reason_description(reason_code),
-                        include_technical
-                    ),
-                    'amount': self._safe_float(amount)
-                }
-
-                # Add quantity if present (only for first 3 reasons)
-                if i <= 3:
-                    quantity_field = f'CAS{str((i-1)*3+10).zfill(2)}'
-                    quantity = self._get_element_value(cas, quantity_field)
-                    if quantity:
-                        reason['quantity'] = self._safe_float(quantity)
-
-                result['reasons'].append(reason)
-
-        return result
-
-    def _transform_generic_elements(self, elements: Dict[str, Any], include_technical: bool) -> Dict[str, Any]:
-        """Transform generic segment elements"""
-
-        result = OrderedDict()
-
-        for elem_id, elem_value in elements.items():
-            # If element has metadata (name, value structure)
-            if isinstance(elem_value, dict):
-                if 'value' in elem_value:
-                    # Element with metadata
-                    name = elem_value.get('name', elem_id)
-                    value = elem_value.get('value')
-                    result[self._to_snake_case(name)] = value
-                elif elem_value.get('composite'):
-                    # Composite element
-                    result[elem_id] = {
-                        'components': elem_value.get('components', []),
-                        'name': elem_value.get('name', 'Composite')
-                    }
-                else:
-                    # Other dict structure
-                    result[elem_id] = elem_value
-            else:
-                # Simple value
-                result[elem_id] = elem_value
-
-        return result
-
-    # Helper methods
-
-    def _build_segment_map(self, segments: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
-        """Build a map of segment ID to list of segments"""
-        segment_map = {}
         for segment in segments:
             seg_id = segment.get('segment_id')
-            if seg_id not in segment_map:
-                segment_map[seg_id] = []
-            segment_map[seg_id].append(segment)
-        return segment_map
+            loop_id = segment.get('loop_id', '')
 
-    def _get_loop_segments(self, segments: List[Dict[str, Any]], loop_id: str) -> List[Dict[str, Any]]:
-        """Get all segments in a specific loop"""
-        return [s for s in segments if s.get('loop_id') == loop_id]
+            # Check if we've entered the detail section
+            if seg_id in detail_start_segments:
+                in_detail = True
+
+            # Classify segment
+            if not in_detail:
+                # Check if it's a heading segment
+                if seg_id in heading_segment_ids or loop_id in heading_loops:
+                    heading_segments.append(segment)
+                elif seg_id == 'N1':
+                    # N1 segments in the beginning are usually heading
+                    heading_segments.append(segment)
+                else:
+                    detail_segments.append(segment)
+            else:
+                detail_segments.append(segment)
+
+        return heading_segments, detail_segments
+
+    def _process_segment_group(self, segments: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Process a group of segments into structured format"""
+        result = OrderedDict()
+
+        # Group segments by loop
+        loops = self._group_segments_by_loop(segments)
+
+        for loop_key, loop_segments in loops.items():
+            if loop_key == 'no_loop':
+                # Process segments not in a loop
+                for segment in loop_segments:
+                    seg_key = self._create_segment_key(segment)
+                    seg_data = self._format_segment(segment)
+
+                    # Handle multiple occurrences of the same segment
+                    if seg_key in result:
+                        # Convert to list if not already
+                        if not isinstance(result[seg_key], list):
+                            result[seg_key] = [result[seg_key]]
+                        result[seg_key].append(seg_data)
+                    else:
+                        result[seg_key] = seg_data
+            else:
+                # Process loop
+                loop_name = self._format_loop_name(loop_key, loop_segments)
+                loop_data = self._process_loop(loop_segments)
+
+                # Handle repeating loops
+                if loop_name in result:
+                    # Convert to list if not already
+                    if not isinstance(result[loop_name], list):
+                        result[loop_name] = [result[loop_name]]
+                    result[loop_name].append(loop_data)
+                else:
+                    # Check if this loop typically repeats
+                    if self._is_repeating_loop(loop_key, loop_segments):
+                        result[loop_name] = [loop_data]
+                    else:
+                        result[loop_name] = loop_data
+
+        return result
+
+    def _group_segments_by_loop(self, segments: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+        """Group segments by their loop ID and instance"""
+        loops = OrderedDict()
+
+        for segment in segments:
+            loop_id = segment.get('loop_id')
+            loop_instance = segment.get('loop_instance', 0)
+
+            if loop_id:
+                # Create a unique key for this loop instance
+                loop_key = f"{loop_id}_{loop_instance}"
+            else:
+                loop_key = 'no_loop'
+
+            if loop_key not in loops:
+                loops[loop_key] = []
+            loops[loop_key].append(segment)
+
+        return loops
+
+    def _process_loop(self, segments: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Process segments within a loop"""
+        result = OrderedDict()
+
+        # Group segments by type within the loop
+        segment_groups = OrderedDict()
+        for segment in segments:
+            seg_id = segment.get('segment_id')
+            if seg_id not in segment_groups:
+                segment_groups[seg_id] = []
+            segment_groups[seg_id].append(segment)
+
+        # Process each segment type
+        for seg_id, seg_list in segment_groups.items():
+            seg_key = self._create_segment_key(seg_list[0])
+
+            if len(seg_list) == 1:
+                result[seg_key] = self._format_segment(seg_list[0])
+            else:
+                # Multiple segments of the same type in the loop
+                result[seg_key] = [self._format_segment(seg) for seg in seg_list]
+
+        return result
+
+    def _format_segment(self, segment: Dict[str, Any]) -> Dict[str, Any]:
+        """Format a single segment with descriptive field names and position numbers"""
+        result = OrderedDict()
+        elements = segment.get('elements', {})
+        seg_id = segment.get('segment_id', '')
+
+        # Get transaction type from the root context if available
+        # This would need to be passed through or stored in the formatter
+        transaction_type = getattr(self, '_current_transaction_type', None)
+
+        for elem_id, elem_data in elements.items():
+            # Extract position number from element ID (e.g., 'BGN01' -> '01')
+            position = re.search(r'\d+$', elem_id)
+            if position:
+                position_num = position.group()
+            else:
+                position_num = elem_id
+
+            # Get element name and value
+            if isinstance(elem_data, dict):
+                # First try to use the name from the parser if available
+                elem_name = elem_data.get('name')
+                elem_value = elem_data.get('value')
+
+                # Handle composite elements
+                if elem_data.get('composite'):
+                    elem_value = elem_data.get('components', [])
+            else:
+                elem_name = None
+                elem_value = elem_data
+
+            # If no name from parser, try to get it from the map loader
+            if not elem_name and self._current_map_file:
+                elem_name = self.map_loader.get_element_name(self._current_map_file, seg_id, elem_id)
+
+            # If still no name, use the element ID
+            if not elem_name or elem_name == elem_id:
+                elem_name = elem_id
+                # Use simple format for fallback
+                field_name = self._format_field_name(elem_name, position_num)
+            else:
+                # Format the field name in Stedi style
+                field_name = self.map_loader.format_element_name_for_json(elem_name, elem_id)
+
+            # Apply any data type conversions
+            if elem_value is not None:
+                elem_value = self._convert_value(elem_value, elem_name, elem_id)
+
+            result[field_name] = elem_value
+
+        return result
+
+    def _format_field_name(self, name: str, position: str) -> str:
+        """Format field name with position number in snake_case"""
+        # Convert name to snake_case
+        name = re.sub(r'[^\w\s]', '', name)  # Remove special characters
+        name = re.sub(r'\s+', '_', name)  # Replace spaces with underscores
+        name = re.sub(r'([A-Z]+)([A-Z][a-z])', r'\1_\2', name)  # Handle acronyms
+        name = re.sub(r'([a-z\d])([A-Z])', r'\1_\2', name)  # Handle camelCase
+        name = name.lower()
+
+        # Remove redundant words
+        name = re.sub(r'_code_code', '_code', name)
+        name = re.sub(r'_id_id', '_id', name)
+        name = re.sub(r'_number_number', '_number', name)
+
+        # Add position number
+        return f"{name}_{position.zfill(2)}"
+
+    def _create_segment_key(self, segment: Dict[str, Any]) -> str:
+        """Create a descriptive key for a segment"""
+        seg_id = segment.get('segment_id')
+        seg_name = segment.get('segment_name', seg_id)
+
+        # Convert to snake_case
+        key = re.sub(r'[^\w\s]', '', seg_name)
+        key = re.sub(r'\s+', '_', key)
+        key = key.lower()
+
+        # Add segment ID if not already included
+        if seg_id and seg_id.lower() not in key:
+            key = f"{key}_{seg_id}"
+
+        return key
+
+    def _format_loop_name(self, loop_key: str, segments: List[Dict[str, Any]]) -> str:
+        """Create a descriptive name for a loop"""
+        # Extract loop ID from key (format: "loopid_instance")
+        parts = loop_key.rsplit('_', 1)
+        loop_id = parts[0] if parts else loop_key
+
+        # Get the first segment to help identify the loop
+        first_segment = segments[0] if segments else None
+        if first_segment:
+            seg_id = first_segment.get('segment_id')
+            seg_name = first_segment.get('segment_name', seg_id)
+
+            # Try to get a descriptive name from the segment
+            if seg_id == 'N1' or seg_id == 'NM1':
+                # Entity loops - try to get entity type
+                entity_code = self._get_element_value(first_segment, f'{seg_id}01')
+                entity_desc = codes.get_entity_description(entity_code) if entity_code else seg_name
+
+                # Format the name
+                name = re.sub(r'[^\w\s]', '', entity_desc)
+                name = re.sub(r'\s+', '_', name)
+                name = name.lower()
+
+                return f"{name}_{seg_id}_loop"
+            else:
+                # Generic loop name
+                seg_key = re.sub(r'[^\w\s]', '', seg_name)
+                seg_key = re.sub(r'\s+', '_', seg_key)
+                seg_key = seg_key.lower()
+
+                return f"{seg_key}_loop"
+
+        # Fallback to loop ID
+        return f"{loop_id}_loop"
+
+    def _is_repeating_loop(self, loop_key: str, segments: List[Dict[str, Any]] = None) -> bool:
+        """Check if a loop can repeat based on metadata from parser"""
+        # Check the loop_max_use metadata from segments
+        if segments:
+            for segment in segments:
+                max_use = segment.get('loop_max_use')
+                if max_use:
+                    # Check if max_use indicates it can repeat
+                    if max_use == 'unbounded':
+                        return True
+                    try:
+                        # If it's a number > 1, it can repeat
+                        if int(max_use) > 1:
+                            return True
+                    except (ValueError, TypeError):
+                        pass
+                    # If max_use is '1' or any other value, it doesn't repeat
+                    return False
+
+        # Default to False if no metadata available
+        return False
 
     def _get_element_value(self, segment: Dict[str, Any], element_id: str) -> Any:
         """Get element value from segment"""
         elements = segment.get('elements', {})
         element = elements.get(element_id)
 
-        # Handle different element structures
         if isinstance(element, dict):
             if 'value' in element:
                 return element['value']
             elif element.get('composite'):
-                return element
-            else:
-                return element
-        else:
-            return element
+                return element.get('components', [])
 
-    def _format_code_with_description(self, code: str, description: str, include_technical: bool) -> Union[str, Dict[str, str]]:
-        """Format a code with its description"""
-        if not code:
+        return element
+
+    def _convert_value(self, value: Any, name: str, elem_id: str) -> Any:
+        """Convert value based on its type or name"""
+        if value is None or value == '':
             return None
 
-        if include_technical:
-            return {
-                'code': code,
-                'description': description
-            }
-        else:
-            return description
+        # Check for date patterns
+        if any(word in name.lower() for word in ['date', 'datetime']):
+            return self._format_date(value)
+
+        # Check for time patterns
+        if 'time' in name.lower() and 'datetime' not in name.lower():
+            return self._format_time(value)
+
+        # Check for amount/money patterns
+        if any(word in name.lower() for word in ['amount', 'charge', 'paid', 'payment', 'price', 'cost', 'fee']):
+            return self._safe_float(value)
+
+        # Check for quantity/count patterns
+        if any(word in name.lower() for word in ['quantity', 'count', 'units', 'number_of']):
+            try:
+                # Try integer first for counts
+                return int(value)
+            except (ValueError, TypeError):
+                return self._safe_float(value)
+
+        # Check for control numbers (should remain as strings even if numeric)
+        if 'control_number' in name.lower() or 'reference_number' in name.lower():
+            return str(value)
+
+        return value
 
     def _format_date(self, date_str: str) -> str:
         """Format date from CCYYMMDD or YYMMDD to YYYY-MM-DD"""
-        if not date_str:
-            return None
+        if not date_str or not isinstance(date_str, str):
+            return date_str
 
         try:
             if len(date_str) == 8:
@@ -924,8 +438,8 @@ class StructuredFormatter:
 
     def _format_time(self, time_str: str) -> str:
         """Format time from HHMM or HHMMSS to HH:MM or HH:MM:SS"""
-        if not time_str:
-            return None
+        if not time_str or not isinstance(time_str, str):
+            return time_str
 
         try:
             if len(time_str) == 4:
@@ -943,40 +457,8 @@ class StructuredFormatter:
             return None
         try:
             return float(value)
-        except:
+        except (ValueError, TypeError):
             return None
-
-    def _to_snake_case(self, text: str) -> str:
-        """Convert text to snake_case"""
-        # Remove special characters and convert to lowercase
-        import re
-        text = re.sub(r'[^\w\s]', '', text)
-        text = re.sub(r'\s+', '_', text)
-        return text.lower()
-
-    def _build_835_summary(self, result: Dict[str, Any]) -> Dict[str, Any]:
-        """Build summary for 835 transaction"""
-        summary = {
-            'total_claims': len(result.get('claims', [])),
-            'total_payment': result.get('payment_information', {}).get('total_payment_amount', 0.0)
-        }
-
-        # Calculate claim totals
-        claims = result.get('claims', [])
-        if claims:
-            summary['total_charge_amount'] = sum(c.get('total_charge_amount', 0) for c in claims)
-            summary['total_paid_amount'] = sum(c.get('total_paid_amount', 0) for c in claims)
-            summary['total_patient_responsibility'] = sum(c.get('patient_responsibility', 0) for c in claims)
-
-        # Calculate provider adjustments
-        provider_adjustments = result.get('provider_adjustments', [])
-        if provider_adjustments:
-            summary['total_provider_adjustments'] = sum(
-                sum(a.get('amount', 0) for a in adj.get('adjustments', []))
-                for adj in provider_adjustments
-            )
-
-        return summary
 
 
 # Convenience function for backwards compatibility and ease of use
@@ -986,10 +468,10 @@ def format_structured(generic_json: Dict[str, Any], include_technical: bool = Tr
 
     Args:
         generic_json: Output from X12Parser
-        include_technical: Include original codes alongside descriptions
+        include_technical: Include original codes alongside descriptions (for compatibility)
 
     Returns:
-        Structured JSON with meaningful field names and preserved X12 organization
+        Structured JSON in Guide JSON format
     """
     formatter = StructuredFormatter()
     return formatter.format(generic_json, include_technical)

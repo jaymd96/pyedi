@@ -59,7 +59,7 @@ if sys.version_info >= (3, 11):
 
     builtins.open = _patched_open
 
-__version__ = "1.0.3"
+__version__ = "1.0.4"
 __author__ = "James"
 
 # NOW we can safely import modules that use pyx12
