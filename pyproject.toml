@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyedi"
-version = "1.0.2"
+version = "1.0.3"
 description = "A comprehensive Python package for parsing, transforming, and mapping X12 EDI files"
 readme = "README.md"
 requires-python = ">=3.8"

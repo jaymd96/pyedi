@@ -14,7 +14,7 @@ this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text(encoding="utf-8") if (this_directory / "README.md").exists() else ""
 
 # Read version from package
-version = "1.0.2"
+version = "1.0.3"
 try:
     with open("pyedi/__init__.py", "r") as f:
         for line in f:

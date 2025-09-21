@@ -30,10 +30,39 @@ Advanced Usage:
     target_json = mapper.map(structured_json)
 """
 
-__version__ = "1.0.2"
+# CRITICAL: Apply Python 3.11+ compatibility patch BEFORE any imports
+# This must happen before pyx12 is imported anywhere
+import sys
+if sys.version_info >= (3, 11):
+    import builtins
+    _original_open = builtins.open
+
+    def _patched_open(*args, **kwargs):
+        """Remove deprecated 'U' mode for Python 3.11+ compatibility"""
+        # Handle positional mode argument
+        if len(args) > 1 and isinstance(args[1], str):
+            if args[1] == 'U':
+                # 'U' mode alone should become 'r' (text mode)
+                args = list(args)
+                args[1] = 'r'
+            elif 'U' in args[1]:
+                # Remove 'U' from compound modes like 'rU'
+                args = list(args)
+                args[1] = args[1].replace('U', '')
+        # Handle keyword mode argument
+        if 'mode' in kwargs and isinstance(kwargs['mode'], str):
+            if kwargs['mode'] == 'U':
+                kwargs['mode'] = 'r'
+            elif 'U' in kwargs['mode']:
+                kwargs['mode'] = kwargs['mode'].replace('U', '')
+        return _original_open(*args, **kwargs)
+
+    builtins.open = _patched_open
+
+__version__ = "1.0.3"
 __author__ = "James"
 
-# Core components
+# NOW we can safely import modules that use pyx12
 from .core.parser import X12Parser
 from .core.structured_formatter import StructuredFormatter, format_structured
 from .core.mapper import SchemaMapper, MappingBuilder, load_mapping_definition, map_to_schema
