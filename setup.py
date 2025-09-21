@@ -52,7 +52,7 @@ setup(
     python_requires=">=3.8",
     install_requires=[
         "pyx12>=2.3.3",
-        "jsonata>=0.2.0",
+        "jsonata-python>=0.6.0",
     ],
     extras_require={
         "cli": [

@@ -12,20 +12,7 @@ import logging
 from typing import Dict, Any, List, Optional, Union
 from enum import Enum
 from pathlib import Path
-import jsonata
-
-# Create a Jsonata class wrapper for compatibility
-class JsonataWrapper:
-    def __init__(self, expression):
-        self.expression = expression
-
-    def evaluate(self, data, context=None):
-        if context:
-            return jsonata.transform(self.expression, data, context)
-        return jsonata.transform(self.expression, data)
-
-# Monkey-patch for compatibility
-jsonata.Jsonata = JsonataWrapper
+from jsonata.jsonata import Jsonata
 
 
 class MappingType(Enum):
@@ -69,7 +56,7 @@ class SchemaMapper:
             if isinstance(expression, str):
                 try:
                     # Create JSONata expression and bind lookup tables if needed
-                    expr = jsonata.Jsonata(expression)
+                    expr = Jsonata(expression)
 
                     # Register lookup table function if tables exist
                     if self.lookup_tables:
@@ -89,7 +76,7 @@ class SchemaMapper:
         for key, value in expressions.items():
             if isinstance(value, str):
                 try:
-                    expr = jsonata.Jsonata(value)
+                    expr = Jsonata(value)
                     if self.lookup_tables:
                         self._register_lookup_function(expr)
                     compiled[key] = expr
@@ -102,7 +89,7 @@ class SchemaMapper:
                 compiled[key] = value
         return compiled
 
-    def _register_lookup_function(self, expr: jsonata.Jsonata):
+    def _register_lookup_function(self, expr: Jsonata):
         """Register custom $lookupTable function with JSONata expression"""
         def lookup_table(table_name: str, key_field: str, value: Any, wildcard: Optional[str] = None):
             """
@@ -187,7 +174,7 @@ class SchemaMapper:
 
     def _evaluate_expression(self, expr: Any, source: Dict[str, Any]) -> Any:
         """Evaluate a compiled expression or nested expressions"""
-        if isinstance(expr, jsonata.Jsonata):
+        if isinstance(expr, Jsonata):
             # Add lookup tables to context
             context = source.copy()
             if self.lookup_tables:
