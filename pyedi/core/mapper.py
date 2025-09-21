@@ -14,6 +14,19 @@ from enum import Enum
 from pathlib import Path
 import jsonata
 
+# Create a Jsonata class wrapper for compatibility
+class JsonataWrapper:
+    def __init__(self, expression):
+        self.expression = expression
+
+    def evaluate(self, data, context=None):
+        if context:
+            return jsonata.transform(self.expression, data, context)
+        return jsonata.transform(self.expression, data)
+
+# Monkey-patch for compatibility
+jsonata.Jsonata = JsonataWrapper
+
 
 class MappingType(Enum):
     """Mapping type determines how output fields are generated"""

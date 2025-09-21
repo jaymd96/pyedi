@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyedi"
-version = "1.0.1"
+version = "1.0.2"
 description = "A comprehensive Python package for parsing, transforming, and mapping X12 EDI files"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -67,7 +67,7 @@ docs = [
 ]
 
 [project.scripts]
-x12-convert = "x12_edi_converter.cli.main:main"
+x12-convert = "pyedi.cli.main:main"
 
 [project.urls]
 Homepage = "https://github.com/jaymd96/pyedi"
@@ -76,11 +76,11 @@ Repository = "https://github.com/jaymd96/pyedi"
 "Bug Tracker" = "https://github.com/jaymd96/pyedi/issues"
 
 [tool.setuptools.packages.find]
-include = ["x12_edi_converter*"]
-exclude = ["tests*", "docs*"]
+include = ["pyedi*"]
+exclude = ["tests*", "docs*", "examples*"]
 
 [tool.setuptools.package-data]
-x12_edi_converter = ["examples/sample_mappings/*.json"]
+pyedi = ["examples/sample_mappings/*.json"]
 
 [tool.black]
 line-length = 100
@@ -101,11 +101,11 @@ check_untyped_defs = true
 
 [tool.pytest.ini_options]
 minversion = "7.0"
-addopts = "-ra -q --cov=x12_edi_converter --cov-report=term-missing"
+addopts = "-ra -q --cov=pyedi --cov-report=term-missing"
 testpaths = ["tests"]
 
 [tool.coverage.run]
-source = ["x12_edi_converter"]
+source = ["pyedi"]
 
 [tool.coverage.report]
 exclude_lines = [

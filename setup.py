@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Setup script for X12 EDI Converter package
+Setup script for PyEDI package
 
 This file exists for backwards compatibility with older pip versions.
 Configuration is primarily in pyproject.toml.
@@ -14,9 +14,9 @@ this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text(encoding="utf-8") if (this_directory / "README.md").exists() else ""
 
 # Read version from package
-version = "1.0.0"
+version = "1.0.2"
 try:
-    with open("x12_edi_converter/__init__.py", "r") as f:
+    with open("pyedi/__init__.py", "r") as f:
         for line in f:
             if line.startswith("__version__"):
                 version = line.split("=")[1].strip().strip('"').strip("'")
@@ -74,11 +74,11 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "x12-convert=x12_edi_converter.cli.main:main",
+            "x12-convert=pyedi.cli.main:main",
         ],
     },
     package_data={
-        "x12_edi_converter": ["examples/sample_mappings/*.json"],
+        "pyedi": ["examples/sample_mappings/*.json"],
     },
     include_package_data=True,
     zip_safe=False,
