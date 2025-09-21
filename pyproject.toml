@@ -1,0 +1,117 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyedi"
+version = "1.0.0"
+description = "A comprehensive Python package for parsing, transforming, and mapping X12 EDI files"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "James", email = "james@harmonyhealth.com"}
+]
+maintainers = [
+    {name = "James", email = "james@harmonyhealth.com"}
+]
+keywords = [
+    "x12",
+    "edi",
+    "healthcare",
+    "parser",
+    "transformer",
+    "jsonata",
+    "835",
+    "837",
+    "834",
+    "electronic-data-interchange"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Healthcare Industry",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Text Processing :: Markup",
+    "Topic :: Office/Business :: Financial :: Medical",
+]
+
+dependencies = [
+    "pyx12>=2.3.3",
+    "jsonata>=0.2.0",
+]
+
+[project.optional-dependencies]
+cli = [
+    "click>=8.0",
+    "colorama>=0.4.4",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "black>=22.0",
+    "flake8>=5.0",
+    "mypy>=1.0",
+    "pre-commit>=3.0",
+]
+docs = [
+    "sphinx>=5.0",
+    "sphinx-rtd-theme>=1.0",
+]
+
+[project.scripts]
+x12-convert = "x12_edi_converter.cli.main:main"
+
+[project.urls]
+Homepage = "https://github.com/jaymd96/pyedi"
+Documentation = "https://pyedi.readthedocs.io"
+Repository = "https://github.com/jaymd96/pyedi"
+"Bug Tracker" = "https://github.com/jaymd96/pyedi/issues"
+
+[tool.setuptools.packages.find]
+include = ["x12_edi_converter*"]
+exclude = ["tests*", "docs*"]
+
+[tool.setuptools.package-data]
+x12_edi_converter = ["examples/sample_mappings/*.json"]
+
+[tool.black]
+line-length = 100
+target-version = ['py38', 'py39', 'py310', 'py311']
+include = '\.pyi?$'
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_any_unimported = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+check_untyped_defs = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --cov=x12_edi_converter --cov-report=term-missing"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["x12_edi_converter"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+    "raise AssertionError",
+    "raise NotImplementedError",
+]

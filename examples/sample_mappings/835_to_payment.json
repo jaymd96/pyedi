@@ -1,0 +1,71 @@
+{
+  "name": "835_to_payment_system",
+  "description": "Transform 835 human-readable JSON to payment system format",
+  "mapping_type": "only_mapped",
+  "expressions": {
+    "payment_id": "trace_information.check_or_eft_number",
+    "payment_date": "payment_information.payment_date",
+    "payment_amount": "payment_information.total_payment_amount",
+    "payment_method": "payment_information.payment_method.code",
+    "payment_method_description": "payment_information.payment_method.description",
+    "credit_or_debit": "payment_information.credit_or_debit.code",
+    "sender_bank": {
+      "routing_number": "payment_information.sender_bank_account.routing_number",
+      "account_number": "payment_information.sender_bank_account.account_number"
+    },
+    "receiver_bank": {
+      "routing_number": "payment_information.receiver_bank_account.routing_number",
+      "account_number": "payment_information.receiver_bank_account.account_number"
+    },
+    "payer": {
+      "name": "payer.name",
+      "type": "payer.entity_type.description",
+      "id": "payer.identification.value",
+      "address": {
+        "street": "payer.address.street_1",
+        "city": "payer.address.city",
+        "state": "payer.address.state",
+        "postal_code": "payer.address.postal_code"
+      },
+      "contact": {
+        "name": "payer.contact.name",
+        "phone": "payer.contact.telephone",
+        "email": "payer.contact.email"
+      }
+    },
+    "payee": {
+      "name": "payee.name",
+      "type": "payee.entity_type.description",
+      "id": "payee.identification.value",
+      "tax_id": "payee.references[reference_qualifier.code=\"TJ\"].value"
+    },
+    "remittance_details": "claims ~> |$| { 'claim_id': patient_control_number, 'claim_status': claim_status.description, 'total_charge': total_charge_amount, 'amount_paid': total_paid_amount, 'patient_responsibility': patient_responsibility, 'payer_claim_number': payer_claim_number, 'patient': { 'first_name': patient.first_name, 'last_name': patient.last_name, 'member_id': patient.member_id }, 'service_count': $count(service_lines), 'services': service_lines ~> |$| { 'procedure_code': procedure_code, 'charge': charge_amount, 'paid': paid_amount, 'adjustments': adjustments ~> |$| { 'group': adjustment_group.description, 'total': $sum(reasons.amount) } | } | } |",
+    "total_claims": "$count(claims)",
+    "total_paid": "$sum(claims.total_paid_amount)",
+    "total_charged": "$sum(claims.total_charge_amount)",
+    "total_patient_responsibility": "$sum(claims.patient_responsibility)",
+    "provider_adjustments": "provider_adjustments ~> |$| { 'provider_id': provider_id, 'fiscal_period': fiscal_period_date, 'adjustments': adjustments ~> |$| { 'code': adjustment_code.code, 'description': adjustment_code.description, 'amount': amount, 'reference': reference_id } | } |",
+    "metadata": {
+      "sender_id": "metadata.sender.id",
+      "receiver_id": "metadata.receiver.id",
+      "interchange_date": "metadata.interchange_date",
+      "interchange_control_number": "metadata.interchange_control_number",
+      "test_mode": "metadata.test_mode",
+      "version": "metadata.functional_group.version"
+    }
+  },
+  "lookup_tables": {
+    "payment_methods": [
+      {"code": "ACH", "system": "ELECTRONIC", "name": "Electronic Transfer"},
+      {"code": "CHK", "system": "CHECK", "name": "Paper Check"},
+      {"code": "NON", "system": "NONE", "name": "No Payment"},
+      {"code": "FWT", "system": "WIRE", "name": "Wire Transfer"}
+    ],
+    "claim_status": [
+      {"edi": "Processed as Primary", "system": "PAID_PRIMARY", "code": "1"},
+      {"edi": "Processed as Secondary", "system": "PAID_SECONDARY", "code": "2"},
+      {"edi": "Denied", "system": "DENIED", "code": "4"},
+      {"edi": "Pended", "system": "PENDING", "code": "5"}
+    ]
+  }
+}
