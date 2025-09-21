@@ -12,7 +12,9 @@ import os
 import json
 import logging
 from collections import OrderedDict
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Union
+from io import StringIO, BytesIO
+import tempfile
 
 import pyx12
 import pyx12.error_handler
@@ -61,17 +63,22 @@ class X12Parser:
         self.current_hl_level = None  # Current HL level code
         self.segment_index = 0  # Track segment position
 
-    def parse(self, source_file: str) -> Dict[str, Any]:
+    def parse(self, source: Union[str, StringIO, BytesIO]) -> Dict[str, Any]:
         """
-        Parse an X12 file to JSON structure
+        Parse an X12 source to JSON structure
 
         Args:
-            source_file: Path to X12 EDI file
+            source: X12 EDI content as:
+                - File path (str starting with '/' or containing path separators)
+                - EDI string content
+                - StringIO/BytesIO file-like object
 
         Returns:
             Dictionary containing parsed EDI data in generic JSON format
         """
-        self.logger.info(f"Converting file: {source_file}")
+        # Determine source type and get file path
+        source_file = self._prepare_source(source)
+        self.logger.info(f"Converting source: {source_file if isinstance(source_file, str) else 'stream'}")
 
         # Reset state for new file
         self.loop_instance_stack = []
@@ -85,12 +92,20 @@ class X12Parser:
         # Initialize error handler
         errh = pyx12.error_handler.errh_null()
 
-        # Open X12 file
+        # Open X12 source
         try:
             src = pyx12.x12file.X12Reader(source_file)
         except pyx12.errors.X12Error as e:
-            self.logger.error(f"Failed to read X12 file: {e}")
+            self.logger.error(f"Failed to read X12 source: {e}")
             raise
+        finally:
+            # Clean up temporary file if created
+            if hasattr(self, '_temp_file') and self._temp_file:
+                try:
+                    os.unlink(self._temp_file)
+                    self._temp_file = None
+                except:
+                    pass
 
         # Load control map based on version
         control_map_file = 'x12.control.00501.xml' if src.icvn == '00501' else 'x12.control.00401.xml'
@@ -470,6 +485,63 @@ class X12Parser:
             current = current.parent
 
         return path
+
+    def _prepare_source(self, source: Union[str, StringIO, BytesIO]) -> str:
+        """
+        Prepare the source for pyx12 processing.
+
+        Args:
+            source: EDI content as file path, string, or file-like object
+
+        Returns:
+            File path that pyx12 can read
+        """
+        self._temp_file = None
+
+        # Check if it's a file-like object
+        if isinstance(source, (StringIO, BytesIO)):
+            # Read content from the file-like object
+            content = source.read()
+            if isinstance(source, StringIO):
+                content = content.encode('utf-8')
+            elif isinstance(content, str):
+                content = content.encode('utf-8')
+
+            # Reset the stream position
+            source.seek(0)
+
+            # Create temporary file
+            with tempfile.NamedTemporaryFile(mode='wb', suffix='.edi', delete=False) as tmp:
+                tmp.write(content)
+                self._temp_file = tmp.name
+                return tmp.name
+
+        # Check if it's a string
+        elif isinstance(source, str):
+            # Determine if it's a file path or EDI content
+            source_stripped = source.strip()
+
+            # Check for file path indicators
+            is_file_path = (
+                source_stripped.startswith('/') or
+                source_stripped.startswith('./') or
+                source_stripped.startswith('../') or
+                '\\' in source or  # Windows path
+                ':' in source[:10] or  # Windows drive letter
+                os.path.exists(source)  # File exists
+            )
+
+            if is_file_path:
+                return source
+            else:
+                # It's EDI content as a string
+                # Create temporary file
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.edi', delete=False) as tmp:
+                    tmp.write(source)
+                    self._temp_file = tmp.name
+                    return tmp.name
+        else:
+            raise ValueError(f"Unsupported source type: {type(source)}")
 
     def _add_to_loop_structure(self, loops: Dict, path: List[str], segment: Dict):
         """Add segment to nested loop structure"""

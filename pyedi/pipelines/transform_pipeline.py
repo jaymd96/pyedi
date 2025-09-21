@@ -7,9 +7,11 @@ parsing, formatting, and mapping stages.
 
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Dict, Any, Union, Optional, List
 from datetime import datetime
+from io import StringIO, BytesIO
 
 from ..core.parser import X12Parser
 from ..core.structured_formatter import StructuredFormatter, format_structured
@@ -86,17 +88,25 @@ class X12Pipeline:
 
     def transform(
         self,
-        edi_file: Union[str, Path],
-        mapping: Union[Dict[str, Any], str, Path],
+        edi_file: Union[str, StringIO, BytesIO, Path],
+        mapping: Union[Dict[str, Any], str, StringIO, Path, None] = None,
         output: Optional[Union[str, Path]] = None,
         return_intermediate: bool = False
     ) -> Union[Dict[str, Any], Dict[str, Dict[str, Any]]]:
         """
-        Transform an EDI file through the complete pipeline.
+        Transform an EDI source through the complete pipeline.
 
         Args:
-            edi_file: Path to X12 EDI file
-            mapping: Mapping definition (dict or file path) or None for structured only
+            edi_file: X12 EDI source as:
+                - File path (str or Path)
+                - EDI string content
+                - StringIO/BytesIO file-like object
+            mapping: Mapping definition as:
+                - Dictionary with mapping configuration
+                - File path to mapping JSON
+                - JSON string with mapping
+                - StringIO containing mapping JSON
+                - None for structured output only (no mapping)
             output: Optional output file path for final result
             return_intermediate: Return all intermediate transformations
 
@@ -110,19 +120,32 @@ class X12Pipeline:
         """
         start_time = datetime.now()
 
-        # Ensure paths
-        edi_path = Path(edi_file)
-        if not edi_path.exists():
-            raise FileNotFoundError(f"EDI file not found: {edi_file}")
+        # Determine source type
+        source_name = "stream"
+        save_intermediate_path = None
 
-        self.logger.info(f"Starting transformation of: {edi_path}")
+        if isinstance(edi_file, (str, Path)):
+            # Check if it's a file path
+            if isinstance(edi_file, Path) or self._is_file_path(edi_file):
+                edi_path = Path(edi_file)
+                if not edi_path.exists():
+                    raise FileNotFoundError(f"EDI file not found: {edi_file}")
+                source_name = str(edi_path)
+                save_intermediate_path = edi_path
+            else:
+                # It's EDI content as a string
+                source_name = "string_input"
+        elif isinstance(edi_file, (StringIO, BytesIO)):
+            source_name = "stream_input"
+
+        self.logger.info(f"Starting transformation of: {source_name}")
 
         # Step 1: Parse EDI to generic JSON
         self.logger.info("Step 1: Parsing EDI to generic JSON...")
-        generic_json = self.parser.parse(str(edi_path))
+        generic_json = self.parser.parse(edi_file)
 
-        if self.save_intermediate:
-            intermediate_path = edi_path.with_suffix('.generic.json')
+        if self.save_intermediate and save_intermediate_path:
+            intermediate_path = save_intermediate_path.with_suffix('.generic.json')
             self._save_json(generic_json, intermediate_path)
             self.logger.info(f"Saved generic JSON to: {intermediate_path}")
 
@@ -130,8 +153,8 @@ class X12Pipeline:
         self.logger.info("Step 2: Formatting to structured JSON...")
         structured_json = self.formatter.format(generic_json, self.include_technical)
 
-        if self.save_intermediate:
-            intermediate_path = edi_path.with_suffix('.structured.json')
+        if self.save_intermediate and save_intermediate_path:
+            intermediate_path = save_intermediate_path.with_suffix('.structured.json')
             self._save_json(structured_json, intermediate_path)
             self.logger.info(f"Saved structured JSON to: {intermediate_path}")
 
@@ -140,16 +163,13 @@ class X12Pipeline:
         if mapping is not None:
             self.logger.info("Step 3: Mapping to target schema...")
 
-            # Load mapping if it's a file path
-            if isinstance(mapping, (str, Path)):
-                mapping = load_mapping_definition(str(mapping))
-
             # Create mapper and perform mapping
+            # SchemaMapper now handles all input types directly
             mapper = SchemaMapper(mapping)
             mapped_json = mapper.map(structured_json)
 
-            if self.save_intermediate:
-                intermediate_path = edi_path.with_suffix('.mapped.json')
+            if self.save_intermediate and save_intermediate_path:
+                intermediate_path = save_intermediate_path.with_suffix('.mapped.json')
                 self._save_json(mapped_json, intermediate_path)
                 self.logger.info(f"Saved mapped JSON to: {intermediate_path}")
 
@@ -177,18 +197,40 @@ class X12Pipeline:
         else:
             return mapped_json
 
+    def _is_file_path(self, source: str) -> bool:
+        """
+        Determine if a string is a file path or content.
+
+        Args:
+            source: String to check
+
+        Returns:
+            True if source appears to be a file path
+        """
+        source_stripped = source.strip()
+
+        # Check for file path indicators
+        return (
+            source_stripped.startswith('/') or
+            source_stripped.startswith('./') or
+            source_stripped.startswith('../') or
+            '\\' in source or  # Windows path
+            ':' in source[:10] or  # Windows drive letter
+            os.path.exists(source)  # File exists
+        )
+
     def transform_batch(
         self,
-        edi_files: List[Union[str, Path]],
-        mapping: Union[Dict[str, Any], str, Path],
+        edi_files: List[Union[str, StringIO, BytesIO, Path]],
+        mapping: Union[Dict[str, Any], str, StringIO, Path, None] = None,
         output_dir: Optional[Union[str, Path]] = None
     ) -> Dict[str, Any]:
         """
         Transform multiple EDI files in batch.
 
         Args:
-            edi_files: List of EDI file paths
-            mapping: Mapping definition (dict or file path)
+            edi_files: List of EDI sources (paths, strings, or file-like objects)
+            mapping: Mapping definition (dict, path, string, StringIO, or None)
             output_dir: Optional directory for output files
 
         Returns:
@@ -243,8 +285,8 @@ class X12Pipeline:
 
     def validate_mapping(
         self,
-        mapping: Union[Dict[str, Any], str, Path],
-        sample_edi: Optional[Union[str, Path]] = None
+        mapping: Union[Dict[str, Any], str, StringIO, Path],
+        sample_edi: Optional[Union[str, StringIO, BytesIO, Path]] = None
     ) -> Dict[str, Any]:
         """
         Validate a mapping definition, optionally with a sample EDI file.
@@ -263,11 +305,20 @@ class X12Pipeline:
         }
 
         try:
-            # Load mapping if it's a file path
-            if isinstance(mapping, (str, Path)):
-                mapping = load_mapping_definition(str(mapping))
+            # SchemaMapper handles loading from various sources
+            temp_mapper = SchemaMapper(mapping)
+            # Extract the loaded mapping definition
+            mapping_dict = {
+                'name': temp_mapper.name,
+                'mapping_type': temp_mapper.mapping_type.value,
+                'expressions': temp_mapper.expressions,
+                'target_example': temp_mapper.target_example,
+                'lookup_tables': temp_mapper.lookup_tables,
+                'schemas': temp_mapper.schemas
+            }
 
             # Check required fields
+            mapping = mapping_dict
             if 'name' not in mapping:
                 results['warnings'].append("Mapping missing 'name' field")
 

@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """
-Structured EDI Formatter Module
+Fixed Structured EDI Formatter Module
 
-Transforms generic X12 JSON output into a structured format similar to Stedi's Guide JSON,
-preserving X12 structure while adding meaningful field names with position numbers.
+This is a fixed version of StructuredFormatter that addresses:
+1. Multi-transaction processing (returns all transactions, not just first)
+2. Consistent array handling for repeatable segments
+3. Proper HI segment field naming (hi01_01, hi02_01, etc.)
+4. Loop structures that repeat are always arrays
+5. Consistent segment structure (always arrays for repeatable segments)
 """
 
 import json
@@ -18,58 +22,67 @@ from .map_loader import MapElementLoader
 
 
 class StructuredFormatter:
-    """Transform generic X12 JSON to structured format preserving X12 organization"""
+    """Transform generic X12 JSON to structured format preserving X12 organization
+
+    FIXED: Now handles multiple transactions properly and consistent array handling"""
 
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self.map_loader = MapElementLoader()
 
-    def format(self, generic_json: Dict[str, Any], include_technical: bool = True) -> Dict[str, Any]:
+    def format(self, generic_json: Dict[str, Any], include_technical: bool = True) -> Union[Dict[str, Any], List[Dict[str, Any]]]:
         """
         Format generic JSON to structured format with meaningful field names
+
+        FIXED: Now processes ALL transactions, not just the first one
 
         Args:
             generic_json: Output from X12Parser
             include_technical: Include original codes alongside descriptions (for compatibility)
 
         Returns:
-            Structured JSON in Guide JSON format with descriptive field names and position numbers
+            Single structured JSON for single transaction, or list for multiple transactions
         """
         try:
             # Store transaction type and map file for element name lookups
             self._current_transaction_type = generic_json.get('transaction_type')
             self._current_map_file = generic_json.get('map_file')
 
-            # Get the first transaction
+            # Get ALL transactions (FIXED: was only getting first)
             transactions = generic_json.get('transactions', [])
             if not transactions:
                 return generic_json
 
-            transaction = transactions[0]
-            segments = transaction.get('segments', [])
+            # Process each transaction
+            results = []
+            for transaction in transactions:
+                segments = transaction.get('segments', [])
 
-            # Build the structured output
-            result = OrderedDict()
+                # Build the structured output for this transaction
+                result = OrderedDict()
 
-            # Add interchange and functional group metadata
-            result['interchange'] = self._format_interchange(generic_json)
-            result['functional_group'] = self._format_functional_group(generic_json)
+                # Add interchange and functional group metadata
+                result['interchange'] = self._format_interchange(generic_json)
+                result['functional_group'] = self._format_functional_group(generic_json)
 
-            # Group segments into heading and detail sections
-            heading_segments, detail_segments = self._partition_segments(segments)
+                # Group segments into heading and detail sections
+                heading_segments, detail_segments = self._partition_segments(segments)
 
-            # Process heading section
-            if heading_segments:
-                result['heading'] = self._process_segment_group(heading_segments)
+                # Process heading section
+                if heading_segments:
+                    result['heading'] = self._process_segment_group(heading_segments)
 
-            # Process detail section
-            if detail_segments:
-                result['detail'] = self._process_segment_group(detail_segments)
+                # Process detail section
+                if detail_segments:
+                    result['detail'] = self._process_segment_group(detail_segments)
 
-            # Add transaction type for convenience
-            result['transaction_type'] = self._current_transaction_type
+                # Add transaction type for convenience
+                result['transaction_type'] = self._current_transaction_type
 
-            return result
+                results.append(result)
+
+            # Return single dict for single transaction, list for multiple
+            return results[0] if len(results) == 1 else results
 
         except Exception as e:
             self.logger.error(f"Error transforming to structured format: {e}", exc_info=True)
@@ -162,22 +175,26 @@ class StructuredFormatter:
                     seg_key = self._create_segment_key(segment)
                     seg_data = self._format_segment(segment)
 
-                    # Handle multiple occurrences of the same segment
+                    # FIXED: Always use arrays for repeatable segments
                     if seg_key in result:
                         # Convert to list if not already
                         if not isinstance(result[seg_key], list):
                             result[seg_key] = [result[seg_key]]
                         result[seg_key].append(seg_data)
                     else:
-                        result[seg_key] = seg_data
+                        # Check if this segment typically repeats
+                        if self._is_repeatable_segment(segment):
+                            result[seg_key] = [seg_data]
+                        else:
+                            result[seg_key] = seg_data
             else:
                 # Process loop
                 loop_name = self._format_loop_name(loop_key, loop_segments)
                 loop_data = self._process_loop(loop_segments)
 
-                # Handle repeating loops
+                # FIXED: Loops that can repeat should always be arrays
                 if loop_name in result:
-                    # Convert to list if not already
+                    # Already exists, must be a repeating loop
                     if not isinstance(result[loop_name], list):
                         result[loop_name] = [result[loop_name]]
                     result[loop_name].append(loop_data)
@@ -226,10 +243,11 @@ class StructuredFormatter:
         for seg_id, seg_list in segment_groups.items():
             seg_key = self._create_segment_key(seg_list[0])
 
-            if len(seg_list) == 1:
+            # FIXED: Always use arrays for segments that can repeat
+            if len(seg_list) == 1 and not self._is_repeatable_segment(seg_list[0]):
                 result[seg_key] = self._format_segment(seg_list[0])
             else:
-                # Multiple segments of the same type in the loop
+                # Multiple segments or repeatable segment - always use array
                 result[seg_key] = [self._format_segment(seg) for seg in seg_list]
 
         return result
@@ -275,6 +293,10 @@ class StructuredFormatter:
         # Get transaction type from the root context if available
         transaction_type = getattr(self, '_current_transaction_type', None)
 
+        # SPECIAL HANDLING FOR HI SEGMENT (Diagnosis codes)
+        if seg_id == 'HI':
+            return self._format_hi_segment(elements)
+
         for elem_id, elem_data in elements.items():
             # Extract position number from element ID (e.g., 'BGN01' -> '01')
             position = re.search(r'\d+$', elem_id)
@@ -304,10 +326,10 @@ class StructuredFormatter:
             if not elem_name or elem_name == elem_id:
                 elem_name = elem_id
                 # Use simple format for fallback
-                field_name = self._format_field_name(elem_name, position_num)
+                field_name = self._format_field_name_improved(elem_name, elem_id, context)
             else:
-                # Format the field name in Stedi style with context
-                field_name = self.map_loader.format_element_name_for_json(elem_name, elem_id, context)
+                # Use improved field naming without position suffixes
+                field_name = self._format_field_name_improved(elem_name, elem_id, context)
 
             # Apply any data type conversions
             if elem_value is not None:
@@ -316,6 +338,127 @@ class StructuredFormatter:
             result[field_name] = elem_value
 
         return result
+
+    def _format_hi_segment(self, elements: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        FIXED: Special formatting for HI segment to properly name diagnosis fields
+
+        HI segment has composite elements HI01, HI02, etc.
+        Each should be named hiXX_01 where XX is the position (01, 02, 03...)
+        """
+        result = OrderedDict()
+
+        # Process each HI element (HI01, HI02, etc.)
+        for elem_id, elem_data in sorted(elements.items()):
+            # Extract position from element ID (HI01 -> 01, HI02 -> 02)
+            match = re.match(r'HI(\d+)', elem_id)
+            if not match:
+                continue
+
+            position = match.group(1)
+
+            # Get the value (usually a composite with diagnosis qualifier and code)
+            if isinstance(elem_data, dict):
+                elem_value = elem_data.get('components', elem_data.get('value'))
+            else:
+                elem_value = elem_data
+
+            # Create proper field name (hi01_01, hi02_01, etc.)
+            field_name = f"hi{position}_01"
+            result[field_name] = elem_value
+
+        return result
+
+    def _is_repeatable_segment(self, segment: Dict[str, Any]) -> bool:
+        """
+        Determine if a segment type typically repeats
+
+        FIXED: More accurate detection of repeatable segments
+        """
+        seg_id = segment.get('segment_id', '')
+
+        # Common repeatable segments
+        repeatable_segments = {
+            'NM1',  # Multiple entities in a loop
+            'N1',   # Multiple parties
+            'REF',  # Multiple references
+            'DTP',  # Multiple dates
+            'DTM',  # Multiple dates/times
+            'CAS',  # Multiple adjustments
+            'AMT',  # Multiple amounts
+            'QTY',  # Multiple quantities
+            'HI',   # Multiple diagnoses (but handled specially)
+            'LX',   # Service lines
+            'SV1', 'SV2', 'SV3',  # Service segments
+            'PWK',  # Paperwork
+            'PER',  # Contact information
+            'DMG',  # Demographics (can repeat in some contexts)
+        }
+
+        return seg_id in repeatable_segments
+
+    def _is_repeating_loop(self, loop_key: str, segments: List[Dict[str, Any]] = None) -> bool:
+        """
+        Check if a loop can repeat
+
+        FIXED: Better detection of repeating loops
+        """
+        # Extract loop ID from key
+        parts = loop_key.rsplit('_', 1)
+        loop_id = parts[0] if parts else loop_key
+
+        # Known repeating loops in healthcare transactions
+        repeating_loops = {
+            # 837 Claims
+            '2000A', '2000B', '2000C',  # Hierarchical levels
+            '2300',   # Claim information
+            '2310A', '2310B', '2310C',  # Providers
+            '2320',   # Other insurance
+            '2400',   # Service lines
+            '2420A', '2420B', '2420C',  # Line providers
+
+            # 835 Remittance
+            '1000A', '1000B',  # Payer/Payee
+            '2000',   # Header number
+            '2100',   # Claim payment
+            '2110',   # Service payment
+
+            # 834 Enrollment
+            '2000',   # Member level
+            '2300',   # Health coverage
+            '2310',   # Provider information
+
+            # Common
+            '1000',   # Party identification loops often repeat
+            '2000',   # Detail loops often repeat
+        }
+
+        # Check if this loop ID is known to repeat
+        for repeating_id in repeating_loops:
+            if loop_id.startswith(repeating_id):
+                return True
+
+        # Check metadata from segments
+        if segments:
+            for segment in segments:
+                max_use = segment.get('loop_max_use')
+                if max_use:
+                    if max_use == 'unbounded':
+                        return True
+                    try:
+                        if int(max_use) > 1:
+                            return True
+                    except (ValueError, TypeError):
+                        pass
+
+        # Special case: claim and service loops should always be arrays
+        if segments and len(segments) > 0:
+            first_seg = segments[0]
+            seg_id = first_seg.get('segment_id', '')
+            if seg_id in ['CLM', 'CLP', 'SVC', 'LX']:
+                return True
+
+        return False
 
     def _get_element_value_raw(self, element: Any) -> str:
         """Get raw element value without conversion"""
@@ -377,6 +520,284 @@ class StructuredFormatter:
         # Add position number
         return f"{name}_{position.zfill(2)}"
 
+    def _format_field_name_improved(self, name: str, elem_id: str, context: Dict[str, str]) -> str:
+        """
+        Format field name with improved semantic naming
+
+        FIXED: Creates cleaner field names without unnecessary position suffixes
+        """
+        segment_id = context.get('segment_id', '')
+        entity_code = context.get('entity_code', '')
+
+        # Map entity codes to cleaner context names (used across segments)
+        entity_context = {
+            'IL': 'insured',
+            'QC': 'patient',
+            'PR': 'payer',
+            'PE': 'payee',
+            '40': 'receiver',
+            '41': 'submitter',
+            '71': 'attending_physician',
+            '72': 'operating_physician',
+            '73': 'other_physician',
+            '77': 'service_location',
+            '82': 'rendering_provider',
+            '85': 'billing_provider',
+            '87': 'pay_to_provider',
+            'DN': 'referring_provider',
+            'DK': 'ordering_provider',
+            'DQ': 'supervising_provider',
+            'FA': 'facility'
+        }
+
+        ctx = entity_context.get(entity_code, '')
+        entity_type = context.get('entity_type', '')
+
+        # Special handling for NM1 segments
+        if segment_id == 'NM1':
+            # Map NM1 elements to clean field names
+            field_map = {
+                'NM101': 'entity_identifier_code',
+                'NM102': 'entity_type_qualifier',
+                'NM103': f"{ctx}_{'last_name' if entity_type == '1' else 'name'}" if ctx else 'name',
+                'NM104': f"{ctx}_first_name" if ctx and entity_type == '1' else 'first_name',
+                'NM105': f"{ctx}_middle_name" if ctx and entity_type == '1' else 'middle_name',
+                'NM106': f"{ctx}_prefix" if ctx else 'prefix',
+                'NM107': f"{ctx}_suffix" if ctx else 'suffix',
+                'NM108': f"{ctx}_id_qualifier" if ctx else 'id_qualifier',
+                'NM109': f"{ctx}_id" if ctx else 'identifier'
+            }
+
+            if elem_id in field_map:
+                return field_map[elem_id]
+
+        # Special handling for N1 segments (Party Identification)
+        elif segment_id == 'N1':
+            field_map = {
+                'N101': 'entity_identifier_code',
+                'N102': 'name',
+                'N103': 'id_qualifier',
+                'N104': 'identifier'
+            }
+
+            if elem_id in field_map:
+                return field_map[elem_id]
+
+        # Special handling for N3 segments (Address)
+        elif segment_id == 'N3':
+            field_map = {
+                'N301': 'address_line_1',
+                'N302': 'address_line_2'
+            }
+
+            if elem_id in field_map:
+                ctx = entity_context.get(entity_code, '')
+                if ctx:
+                    return f"{ctx}_{field_map[elem_id]}"
+                return field_map[elem_id]
+
+        # Special handling for N4 segments (City/State/Zip)
+        elif segment_id == 'N4':
+            field_map = {
+                'N401': 'city',
+                'N402': 'state',
+                'N403': 'zip_code',
+                'N404': 'country_code'
+            }
+
+            if elem_id in field_map:
+                ctx = entity_context.get(entity_code, '')
+                if ctx:
+                    return f"{ctx}_{field_map[elem_id]}"
+                return field_map[elem_id]
+
+        # Special handling for CLM segments (Claim Information)
+        elif segment_id == 'CLM':
+            field_map = {
+                'CLM01': 'claim_id',
+                'CLM02': 'total_charge_amount',
+                'CLM03': 'claim_filing_indicator',
+                'CLM04': 'non_institutional_claim_type',
+                'CLM05': 'facility_code',
+                'CLM06': 'claim_frequency_code',
+                'CLM07': 'provider_signature',
+                'CLM08': 'assignment_code',
+                'CLM09': 'benefits_assignment',
+                'CLM10': 'release_info_code',
+                'CLM11': 'patient_signature_code',
+                'CLM12': 'related_causes_code'
+            }
+
+            if elem_id in field_map:
+                return field_map[elem_id]
+
+        # Special handling for CLP segments (Claim Payment)
+        elif segment_id == 'CLP':
+            field_map = {
+                'CLP01': 'claim_id',
+                'CLP02': 'claim_status',
+                'CLP03': 'total_charge_amount',
+                'CLP04': 'total_paid_amount',
+                'CLP05': 'patient_responsibility',
+                'CLP06': 'claim_filing_indicator',
+                'CLP07': 'payer_claim_control_number',
+                'CLP08': 'facility_type',
+                'CLP09': 'claim_frequency_code'
+            }
+
+            if elem_id in field_map:
+                return field_map[elem_id]
+
+        # Special handling for SVC segments (Service Payment)
+        elif segment_id == 'SVC':
+            field_map = {
+                'SVC01': 'procedure_code',
+                'SVC02': 'charge_amount',
+                'SVC03': 'paid_amount',
+                'SVC04': 'revenue_code',
+                'SVC05': 'units_paid',
+                'SVC06': 'procedure_code_2',
+                'SVC07': 'units_original'
+            }
+
+            if elem_id in field_map:
+                return field_map[elem_id]
+
+        # Special handling for CAS segments (Claim Adjustment)
+        elif segment_id == 'CAS':
+            field_map = {
+                'CAS01': 'adjustment_group_code',
+                'CAS02': 'adjustment_reason_code',
+                'CAS03': 'adjustment_amount',
+                'CAS04': 'adjustment_quantity',
+                'CAS05': 'adjustment_reason_code_2',
+                'CAS06': 'adjustment_amount_2',
+                'CAS07': 'adjustment_quantity_2'
+            }
+
+            if elem_id in field_map:
+                return field_map[elem_id]
+
+        # Special handling for DTM/DTP segments (Date/Time)
+        elif segment_id in ['DTM', 'DTP']:
+            qualifier = context.get('date_qualifier', '')
+
+            # Map common date qualifiers to meaningful names
+            date_types = {
+                '036': 'expiration_date',
+                '050': 'received_date',
+                '096': 'discharge_date',
+                '097': 'delivery_date',
+                '098': 'certification_date',
+                '102': 'issue_date',
+                '139': 'claim_date',
+                '232': 'claim_statement_period_start',
+                '233': 'claim_statement_period_end',
+                '290': 'coordination_of_benefits',
+                '291': 'signature_date',
+                '304': 'latest_visit',
+                '360': 'initial_disability',
+                '361': 'last_disability',
+                '386': 'employment_begin',
+                '431': 'onset_of_illness',
+                '434': 'statement_date',
+                '435': 'admission_date',
+                '454': 'initial_treatment',
+                '471': 'prescription_date',
+                '472': 'service_date',
+                '484': 'last_menstrual_period',
+                '573': 'date_claim_paid'
+            }
+
+            if qualifier in date_types:
+                return date_types[qualifier]
+            elif elem_id.endswith('01'):
+                return 'date_qualifier'
+            elif elem_id.endswith('02'):
+                return 'date_format'
+            elif elem_id.endswith('03'):
+                return 'date_value'
+
+        # Special handling for REF segments (Reference)
+        elif segment_id == 'REF':
+            qualifier = context.get('ref_qualifier', '')
+
+            # Map common reference qualifiers to meaningful names
+            ref_types = {
+                '0B': 'state_license_number',
+                '0F': 'subluxation_documentation',
+                '0K': 'policy_number',
+                '1A': 'blue_cross_provider_id',
+                '1B': 'blue_shield_provider_id',
+                '1C': 'medicare_provider_id',
+                '1D': 'medicaid_provider_id',
+                '1G': 'provider_upin',
+                '1H': 'champus_id',
+                '1J': 'facility_id',
+                '1K': 'payor_claim_number',
+                '1L': 'group_number',
+                '1S': 'ambulatory_patient_group',
+                '1W': 'member_id',
+                '2U': 'payer_id',
+                '4N': 'special_payment_reference',
+                '6P': 'group_number',
+                '6R': 'provider_control_number',
+                '9A': 'repriced_claim_reference',
+                '9B': 'repriced_line_item_reference',
+                '9C': 'adjusted_repriced_claim',
+                '9D': 'adjusted_repriced_line',
+                '9F': 'referral_number',
+                'D9': 'claim_number',
+                'EA': 'medical_record_number',
+                'EI': 'employer_id',
+                'EJ': 'patient_account_number',
+                'F8': 'original_reference_number',
+                'G1': 'prior_authorization',
+                'G3': 'predetermination_of_benefits',
+                'HPI': 'health_plan_id',
+                'IG': 'insurance_policy_number',
+                'LU': 'location_number',
+                'N5': 'provider_plan_network_id',
+                'N7': 'facility_network_id',
+                'SY': 'social_security_number',
+                'TJ': 'federal_tax_id'
+            }
+
+            if qualifier in ref_types:
+                return ref_types[qualifier]
+            elif elem_id.endswith('01'):
+                return 'reference_qualifier'
+            elif elem_id.endswith('02'):
+                return 'reference_value'
+
+        # Default formatting - clean up the name without position suffix
+        # Convert to snake_case
+        name = re.sub(r'[^\w\s]', '', name)
+        name = re.sub(r'\s+', '_', name)
+        name = re.sub(r'([A-Z]+)([A-Z][a-z])', r'\1_\2', name)
+        name = re.sub(r'([a-z\d])([A-Z])', r'\1_\2', name)
+        name = name.lower()
+
+        # Remove redundant words
+        name = re.sub(r'_code_code', '_code', name)
+        name = re.sub(r'_id_id', '_id', name)
+        name = re.sub(r'_identifier_identifier', '_identifier', name)
+        name = re.sub(r'_number_number', '_number', name)
+
+        # For key fields, don't add position suffix
+        if any(key in name for key in ['identifier', 'code', 'date', 'amount', 'name', 'address', 'city', 'state', 'zip']):
+            return name
+
+        # Extract position for other fields
+        position = re.search(r'\d+$', elem_id)
+        if position:
+            position_num = position.group()
+            # Only add position if it's meaningful
+            if int(position_num) > 1 or segment_id in ['ST', 'SE', 'GS', 'GE']:
+                return f"{name}_{position_num.zfill(2)}"
+
+        return name
+
     def _create_segment_key(self, segment: Dict[str, Any]) -> str:
         """Create a descriptive key for a segment"""
         seg_id = segment.get('segment_id')
@@ -427,28 +848,6 @@ class StructuredFormatter:
 
         # Fallback to loop ID
         return f"{loop_id}_loop"
-
-    def _is_repeating_loop(self, loop_key: str, segments: List[Dict[str, Any]] = None) -> bool:
-        """Check if a loop can repeat based on metadata from parser"""
-        # Check the loop_max_use metadata from segments
-        if segments:
-            for segment in segments:
-                max_use = segment.get('loop_max_use')
-                if max_use:
-                    # Check if max_use indicates it can repeat
-                    if max_use == 'unbounded':
-                        return True
-                    try:
-                        # If it's a number > 1, it can repeat
-                        if int(max_use) > 1:
-                            return True
-                    except (ValueError, TypeError):
-                        pass
-                    # If max_use is '1' or any other value, it doesn't repeat
-                    return False
-
-        # Default to False if no metadata available
-        return False
 
     def _get_element_value(self, segment: Dict[str, Any], element_id: str) -> Any:
         """Get element value from segment"""
@@ -538,16 +937,18 @@ class StructuredFormatter:
 
 
 # Convenience function for backwards compatibility and ease of use
-def format_structured(generic_json: Dict[str, Any], include_technical: bool = True) -> Dict[str, Any]:
+def format_structured(generic_json: Dict[str, Any], include_technical: bool = True) -> Union[Dict[str, Any], List[Dict[str, Any]]]:
     """
     Format generic X12 JSON to structured format
+
+    FIXED: Now processes ALL transactions, not just the first one
 
     Args:
         generic_json: Output from X12Parser
         include_technical: Include original codes alongside descriptions (for compatibility)
 
     Returns:
-        Structured JSON in Guide JSON format
+        Single structured JSON for single transaction, or list for multiple transactions
     """
     formatter = StructuredFormatter()
     return formatter.format(generic_json, include_technical)

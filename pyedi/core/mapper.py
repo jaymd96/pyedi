@@ -9,9 +9,11 @@ mappings, lookups, and transformations.
 
 import json
 import logging
+import os
 from typing import Dict, Any, List, Optional, Union
 from enum import Enum
 from pathlib import Path
+from io import StringIO, BytesIO
 from jsonata.jsonata import Jsonata
 
 
@@ -25,12 +27,18 @@ class MappingType(Enum):
 class SchemaMapper:
     """Schema mapper using JSONata expressions for complex transformations"""
 
-    def __init__(self, mapping_definition: Dict[str, Any]):
+    def __init__(self, mapping_definition: Union[Dict[str, Any], str, StringIO, Path]):
         """
         Initialize mapper with mapping definition
 
         Args:
-            mapping_definition: Dictionary containing:
+            mapping_definition: Mapping as:
+                - Dictionary containing mapping configuration
+                - JSON string with mapping
+                - StringIO containing JSON mapping
+                - Path to JSON mapping file
+
+                Dictionary should contain:
                 - name: Mapping name
                 - mapping_type: Type of mapping (only_mapped, merge_with_target, pass_through)
                 - expressions: Dictionary of target field paths to JSONata expressions
@@ -38,6 +46,9 @@ class SchemaMapper:
                 - lookup_tables: Optional lookup tables for value conversion
                 - schemas: Optional source/target schemas
         """
+        # Load mapping definition if not already a dict
+        if not isinstance(mapping_definition, dict):
+            mapping_definition = self._load_mapping_definition(mapping_definition)
         self.logger = logging.getLogger(__name__)
         self.name = mapping_definition.get('name', 'unnamed_mapping')
         self.mapping_type = MappingType(mapping_definition.get('mapping_type', 'only_mapped'))
@@ -124,18 +135,18 @@ class SchemaMapper:
         # Register the function with the expression
         expr.register_lambda('lookupTable', lookup_table)
 
-    def map(self, source: Union[Dict[str, Any], str, Path]) -> Dict[str, Any]:
+    def map(self, source: Union[Dict[str, Any], str, StringIO, Path]) -> Dict[str, Any]:
         """
         Map source JSON to target schema using mapping definition
 
         Args:
-            source: Source JSON as dict, JSON string, or path to JSON file
+            source: Source JSON as dict, JSON string, StringIO, or path to JSON file
 
         Returns:
             Mapped JSON according to target schema definition
         """
         # Load source if needed
-        if isinstance(source, (str, Path)):
+        if not isinstance(source, dict):
             source = self._load_json(source)
 
         # Initialize output based on mapping type
@@ -233,15 +244,47 @@ class SchemaMapper:
         else:
             current[final_key] = value
 
-    def _load_json(self, source: Union[str, Path]) -> Dict[str, Any]:
-        """Load JSON from string or file"""
-        if isinstance(source, Path) or (isinstance(source, str) and source.strip().startswith('/')):
-            # Load from file
+    def _load_json(self, source: Union[str, StringIO, Path]) -> Dict[str, Any]:
+        """Load JSON from string, StringIO, or file"""
+        # Handle StringIO
+        if isinstance(source, StringIO):
+            content = source.read()
+            source.seek(0)  # Reset position
+            return json.loads(content)
+
+        # Handle Path object
+        elif isinstance(source, Path):
             with open(source, 'r') as f:
                 return json.load(f)
+
+        # Handle string (could be path or JSON)
+        elif isinstance(source, str):
+            source_stripped = source.strip()
+
+            # Check if it's a file path
+            is_file_path = (
+                source_stripped.startswith('/') or
+                source_stripped.startswith('./') or
+                source_stripped.startswith('../') or
+                '\\' in source or  # Windows path
+                ':' in source[:10] or  # Windows drive letter
+                (not source_stripped.startswith('{') and
+                 not source_stripped.startswith('['))  # Not JSON
+            )
+
+            if is_file_path and os.path.exists(source):
+                # Load from file
+                with open(source, 'r') as f:
+                    return json.load(f)
+            else:
+                # Parse JSON string
+                return json.loads(source)
         else:
-            # Parse JSON string
-            return json.loads(source)
+            raise ValueError(f"Unsupported source type: {type(source)}")
+
+    def _load_mapping_definition(self, source: Union[str, StringIO, Path]) -> Dict[str, Any]:
+        """Load mapping definition from various sources"""
+        return self._load_json(source)
 
     def validate(self, output: Dict[str, Any]) -> List[str]:
         """
@@ -326,27 +369,31 @@ class MappingBuilder:
 
 
 # Convenience functions
-def load_mapping_definition(file_path: str) -> Dict[str, Any]:
-    """Load mapping definition from JSON file"""
-    with open(file_path, 'r') as f:
-        return json.load(f)
+def load_mapping_definition(source: Union[str, StringIO, Path]) -> Dict[str, Any]:
+    """
+    Load mapping definition from various sources
+
+    Args:
+        source: Mapping definition as file path, JSON string, or StringIO
+
+    Returns:
+        Mapping definition dictionary
+    """
+    mapper = SchemaMapper({'name': 'temp', 'mapping_type': 'only_mapped', 'expressions': {}})
+    return mapper._load_json(source)
 
 
-def map_to_schema(source: Union[Dict, str, Path], mapping: Union[Dict, str, Path]) -> Dict[str, Any]:
+def map_to_schema(source: Union[Dict, str, StringIO, Path], mapping: Union[Dict, str, StringIO, Path]) -> Dict[str, Any]:
     """
     Quick mapping function for JSON-to-JSON transformations
 
     Args:
-        source: Source JSON (dict, string, or file path)
-        mapping: Mapping definition (dict or file path)
+        source: Source JSON (dict, string, StringIO, or file path)
+        mapping: Mapping definition (dict, string, StringIO, or file path)
 
     Returns:
         Mapped JSON according to target schema
     """
-    # Load mapping if needed
-    if isinstance(mapping, (str, Path)):
-        mapping = load_mapping_definition(mapping)
-
     # Create mapper and map
     mapper = SchemaMapper(mapping)
     return mapper.map(source)
