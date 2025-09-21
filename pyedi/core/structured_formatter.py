@@ -239,9 +239,40 @@ class StructuredFormatter:
         result = OrderedDict()
         elements = segment.get('elements', {})
         seg_id = segment.get('segment_id', '')
+        loop_id = segment.get('loop_id', '')
+        loop_type = self._get_loop_type(loop_id, segment)
+
+        # Build context for naming
+        context = {
+            'segment_id': seg_id,
+            'loop_id': loop_id,
+            'loop_type': loop_type
+        }
+
+        # Extract entity code for NM1/N1 segments to provide context
+        if seg_id == 'NM1' and 'NM101' in elements:
+            entity_code = self._get_element_value_raw(elements.get('NM101'))
+            context['entity_code'] = entity_code
+            # Also store entity type (1=person, 2=org)
+            if 'NM102' in elements:
+                context['entity_type'] = self._get_element_value_raw(elements.get('NM102'))
+            # Store for use by subsequent segments in same loop
+            self._current_entity_code = entity_code
+        elif seg_id == 'N1' and 'N101' in elements:
+            entity_code = self._get_element_value_raw(elements.get('N101'))
+            context['entity_code'] = entity_code
+            self._current_entity_code = entity_code
+        elif hasattr(self, '_current_entity_code'):
+            # Use stored entity code for other segments in same loop
+            context['entity_code'] = self._current_entity_code
+
+        # Extract qualifiers for REF and DTP/DTM segments
+        if seg_id == 'REF' and 'REF01' in elements:
+            context['ref_qualifier'] = self._get_element_value_raw(elements.get('REF01'))
+        elif seg_id in ['DTP', 'DTM'] and f'{seg_id}01' in elements:
+            context['date_qualifier'] = self._get_element_value_raw(elements.get(f'{seg_id}01'))
 
         # Get transaction type from the root context if available
-        # This would need to be passed through or stored in the formatter
         transaction_type = getattr(self, '_current_transaction_type', None)
 
         for elem_id, elem_data in elements.items():
@@ -275,8 +306,8 @@ class StructuredFormatter:
                 # Use simple format for fallback
                 field_name = self._format_field_name(elem_name, position_num)
             else:
-                # Format the field name in Stedi style
-                field_name = self.map_loader.format_element_name_for_json(elem_name, elem_id)
+                # Format the field name in Stedi style with context
+                field_name = self.map_loader.format_element_name_for_json(elem_name, elem_id, context)
 
             # Apply any data type conversions
             if elem_value is not None:
@@ -285,6 +316,49 @@ class StructuredFormatter:
             result[field_name] = elem_value
 
         return result
+
+    def _get_element_value_raw(self, element: Any) -> str:
+        """Get raw element value without conversion"""
+        if isinstance(element, dict):
+            return element.get('value', '')
+        return str(element) if element else ''
+
+    def _get_loop_type(self, loop_id: str, segment: Dict[str, Any]) -> str:
+        """Determine loop type from loop ID and context"""
+        # Common healthcare loop patterns
+        if 'payer' in loop_id.lower() or loop_id in ['1000A', '1000']:
+            return 'payer'
+        elif 'payee' in loop_id.lower() or loop_id in ['1000B']:
+            return 'payee'
+        elif 'subscriber' in loop_id.lower() or loop_id in ['2000B', '2010BA']:
+            return 'subscriber'
+        elif 'patient' in loop_id.lower() or loop_id in ['2000C', '2010CA']:
+            return 'patient'
+        elif 'billing' in loop_id.lower() or loop_id in ['2010AA']:
+            return 'billing_provider'
+        elif 'rendering' in loop_id.lower() or loop_id in ['2310B', '2420A']:
+            return 'rendering_provider'
+        elif 'referring' in loop_id.lower() or loop_id in ['2310A', '2420B']:
+            return 'referring_provider'
+        elif 'receiver' in loop_id.lower() or loop_id in ['1000B']:
+            return 'receiver'
+        elif 'submitter' in loop_id.lower() or loop_id in ['1000A']:
+            return 'submitter'
+
+        # Check segment name hints
+        seg_name = segment.get('segment_name', '').lower()
+        if 'payer' in seg_name:
+            return 'payer'
+        elif 'payee' in seg_name:
+            return 'payee'
+        elif 'patient' in seg_name:
+            return 'patient'
+        elif 'subscriber' in seg_name or 'insured' in seg_name:
+            return 'subscriber'
+        elif 'provider' in seg_name:
+            return 'provider'
+
+        return ''
 
     def _format_field_name(self, name: str, position: str) -> str:
         """Format field name with position number in snake_case"""
@@ -402,9 +476,11 @@ class StructuredFormatter:
         if 'time' in name.lower() and 'datetime' not in name.lower():
             return self._format_time(value)
 
-        # Check for amount/money patterns
-        if any(word in name.lower() for word in ['amount', 'charge', 'paid', 'payment', 'price', 'cost', 'fee']):
-            return self._safe_float(value)
+        # Check for amount/money patterns - but exclude method/format codes
+        name_lower = name.lower()
+        if ('method' not in name_lower and 'format' not in name_lower and 'code' not in name_lower):
+            if any(word in name_lower for word in ['amount', 'charge', 'paid', 'payment', 'price', 'cost', 'fee']):
+                return self._safe_float(value)
 
         # Check for quantity/count patterns
         if any(word in name.lower() for word in ['quantity', 'count', 'units', 'number_of']):
