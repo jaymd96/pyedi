@@ -1,0 +1,205 @@
+{
+  "interchange": {
+    "sender_id": "HEALTHPLAN123",
+    "sender_qualifier": "ZZ",
+    "receiver_id": "PROVIDER456",
+    "receiver_qualifier": "ZZ",
+    "date": "210901",
+    "time": "1200",
+    "control_number": "000000001",
+    "version": "00501",
+    "test_indicator": "P"
+  },
+  "functional_group": {
+    "functional_id": "HC",
+    "sender_code": "HEALTHPLAN123",
+    "receiver_code": "PROVIDER456",
+    "date": "20210901",
+    "time": "1200",
+    "control_number": "1",
+    "version": "005010X222A1"
+  },
+  "heading": {
+    "transaction_set_header_loop": {
+      "transaction_set_header_ST": {
+        "transaction_set_identifier_code": "837",
+        "transaction_set_control_number_02": "0001",
+        "implementation_convention_reference_03": "005010X222A1"
+      }
+    },
+    "beginning_of_hierarchical_transaction_loop": {
+      "beginning_of_hierarchical_transaction_BHT": {
+        "hierarchical_structure_code": "0019",
+        "transaction_set_purpose_code": "00",
+        "originator_application_transaction_identifier": "REF123456",
+        "transaction_set_creation_date": "2021-09-01",
+        "transaction_set_creation_time_05": "12:00",
+        "claim_or_encounter_identifier": null
+      }
+    },
+    "submitter_NM1_loop": [
+      {
+        "submitter_name_NM1": [
+          {
+            "entity_identifier_code": "41",
+            "entity_type_qualifier": "2",
+            "submitter_name": "UNITED HEALTHCARE",
+            "first_name": null,
+            "middle_name": null,
+            "submitter_prefix": null,
+            "submitter_suffix": null,
+            "submitter_id_qualifier": "46",
+            "submitter_id": "87726"
+          }
+        ]
+      }
+    ],
+    "receiver_NM1_loop": [
+      {
+        "receiver_name_NM1": [
+          {
+            "entity_identifier_code": "40",
+            "entity_type_qualifier": "2",
+            "receiver_name": "PROVIDER CORP",
+            "first_name": null,
+            "middle_name": null,
+            "receiver_prefix": null,
+            "receiver_suffix": null,
+            "receiver_id_qualifier": "46",
+            "receiver_id": "12345"
+          }
+        ]
+      }
+    ]
+  },
+  "detail": {
+    "billing_provider_hierarchical_level_loop": [
+      {
+        "billing_provider_hierarchical_level_HL": {
+          "hierarchical_id_number": "1",
+          "hierarchical_parent_id_number_02": null,
+          "hierarchical_level_code": "20",
+          "hierarchical_child_code": "1"
+        }
+      }
+    ],
+    "billing_provider_NM1_loop": {
+      "billing_provider_name_NM1": [
+        {
+          "entity_identifier_code": "85",
+          "entity_type_qualifier": "2",
+          "billing_provider_name": "FAMILY MEDICAL CENTER",
+          "first_name": null,
+          "middle_name": null,
+          "billing_provider_prefix": null,
+          "billing_provider_suffix": null,
+          "billing_provider_id_qualifier": "XX",
+          "billing_provider_id": "1234567890"
+        }
+      ]
+    },
+    "subscriber_hierarchical_level_loop": [
+      {
+        "subscriber_hierarchical_level_HL": {
+          "hierarchical_id_number": "2",
+          "hierarchical_parent_id_number_02": "1",
+          "hierarchical_level_code": "22",
+          "hierarchical_child_code": "0"
+        },
+        "subscriber_information_SBR": {
+          "payer_responsibility_sequence_number_code": "P",
+          "individual_relationship_code": "18",
+          "insured_group_or_policy_number_03": null,
+          "other_insured_group_name": null,
+          "insurance_type_code": null,
+          "coordination_of_benefits_code": null,
+          "yes_no_condition_or_response_code": null,
+          "employment_status_code": null,
+          "claim_filing_indicator_code": "CI"
+        }
+      }
+    ],
+    "insured_or_subscriber_NM1_loop": {
+      "subscriber_name_NM1": [
+        {
+          "entity_identifier_code": "IL",
+          "entity_type_qualifier": "1",
+          "insured_last_name": "SMITH",
+          "insured_first_name": "JOHN",
+          "insured_middle_name": null,
+          "insured_prefix": null,
+          "insured_suffix": null,
+          "insured_id_qualifier": "MI",
+          "insured_id": "987654321"
+        }
+      ]
+    },
+    "claim_information_loop": [
+      {
+        "claim_information_CLM": {
+          "claim_id": "CLM789123",
+          "total_charge_amount": 450.5,
+          "claim_filing_indicator": null,
+          "non_institutional_claim_type": null,
+          "facility_code": [
+            "11",
+            "B",
+            "1"
+          ],
+          "claim_frequency_code": "Y",
+          "provider_signature": "A",
+          "assignment_code": "Y",
+          "benefits_assignment": "Y"
+        }
+      }
+    ],
+    "dtp": [
+      {
+        "service_date": "2021-09-01"
+      }
+    ],
+    "hi": [
+      {
+        "hi01_01": [
+          "ABK",
+          "J449"
+        ]
+      }
+    ],
+    "lx": [
+      {
+        "assigned_number": "1"
+      },
+      {
+        "assigned_number": "2"
+      }
+    ],
+    "sv1": [
+      {
+        "sv101_101": [
+          "HC",
+          "99213"
+        ],
+        "line_item_charge_amount": 150.5,
+        "unit_or_basis_for_measurement_code": "UN",
+        "service_unit_count_104": 1,
+        "place_of_service_code": null,
+        "service_type_code": null,
+        "sv107_107": "1"
+      },
+      {
+        "sv101_101": [
+          "HC",
+          "93000"
+        ],
+        "line_item_charge_amount": 300.0,
+        "unit_or_basis_for_measurement_code": "UN",
+        "service_unit_count_104": 1,
+        "place_of_service_code": null,
+        "service_type_code": null,
+        "sv107_107": "2"
+      }
+    ]
+  },
+  "transaction_type": "837"
+}

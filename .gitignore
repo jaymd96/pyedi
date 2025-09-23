@@ -152,6 +152,13 @@ output/
 input/
 extracted/
 database/
-test_*.py
 *.db
 *.sqlite
+
+# Output files (but keep important JSON files)
+*.csv
+output_*.json
+!mapping*.json
+!examples/**/*.json
+!tests/**/*.json
+!data/**/*.json

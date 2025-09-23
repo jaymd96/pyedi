@@ -1,0 +1,129 @@
+{
+  "interchange": {
+    "sender_id": "UNITEDHC",
+    "sender_qualifier": "ZZ",
+    "receiver_id": "FAMILYHEALTH",
+    "receiver_qualifier": "ZZ",
+    "date": "250925",
+    "time": "0800",
+    "control_number": "835000001",
+    "version": "00501",
+    "test_indicator": "P"
+  },
+  "functional_group": {
+    "functional_id": "HP",
+    "sender_code": "UNITEDHC",
+    "receiver_code": "FAMILYHEALTH",
+    "date": "20250925",
+    "time": "0800",
+    "control_number": "1",
+    "version": "005010X221A1"
+  },
+  "heading": {
+    "transaction_set_header_loop": {
+      "transaction_set_header_ST": {
+        "transaction_set_identifier_code_01": "835",
+        "transaction_set_control_number_02": "0001",
+        "implementation_convention_reference_03": "005010X221A1"
+      }
+    },
+    "financial_information_loop": {
+      "financial_information_BPR": {
+        "transaction_handling_code_01": "I",
+        "total_actual_provider_payment_amount_02": 1500.0,
+        "credit_or_debit_flag_code_03": "C",
+        "payment_method_code_04": null,
+        "payment_format_code_05": null,
+        "depository_financial_institution_dfi_identification_number_qualifier_06": "01",
+        "sender_dfi_identifier_07": "123456789",
+        "account_number_qualifier_08": null,
+        "sender_bank_account_number_09": 987654321,
+        "payer_identifier_10": "1234567890",
+        "originating_company_supplemental_code_11": null,
+        "depository_financial_institution_dfi_identification_number_qualifier_12": "01",
+        "receiver_or_provider_bank_id_number_13": "555666777",
+        "account_number_qualifier_14": null,
+        "receiver_or_provider_account_number_15": 777888999
+      },
+      "reassociation_trace_number_TRN": {
+        "trace_type_code_01": "1",
+        "check_or_eft_trace_number_02": "123456789",
+        "payer_identifier_03": "1555666777",
+        "originating_company_supplemental_code_04": "987654321"
+      },
+      "production_date_DTM": {
+        "date_time_qualifier_01": "405",
+        "service_date_02": "2025-09-24"
+      }
+    },
+    "payer_N1_loop": {
+      "payer_identification_N1": {
+        "entity_identifier_code_101": "PR",
+        "payee_name_102": "UNITED HEALTHCARE"
+      },
+      "payer_address_N3": {
+        "payee_address_line_301": "123 INSURANCE WAY"
+      },
+      "payer_city_state_zip_code_N4": {
+        "payee_city_name_401": "MINNEAPOLIS",
+        "payee_state_code_402": "MN",
+        "payee_postal_zone_or_zip_code_403": "55401"
+      }
+    },
+    "payee_N1_loop": {
+      "payee_identification_N1": {
+        "entity_identifier_code_101": "PE",
+        "payee_name_102": "FAMILY HEALTH CLINIC",
+        "identification_code_qualifier_103": "XX",
+        "payee_identification_code_104": "1234567890"
+      }
+    }
+  },
+  "detail": {
+    "header_number_loop": {
+      "header_number_LX": {
+        "assigned_number_01": "1"
+      }
+    },
+    "claim_payment_information_loop": {
+      "claim_payment_information_CLP": {
+        "patient_control_number_01": "CLM001",
+        "claim_status_code_02": "1",
+        "total_claim_charge_amount_03": 800.0,
+        "claim_payment_amount_04": 600.0,
+        "patient_responsibility_amount_05": 200.0,
+        "claim_filing_indicator_code_06": "MC",
+        "payer_claim_control_number_07": "CLAIM123456",
+        "facility_type_code_08": "21",
+        "claim_frequency_code_09": null,
+        "patient_status_code_10": "41"
+      },
+      "patient_name_NM1": {
+        "entity_identifier_code_101": "QC",
+        "entity_type_qualifier_102": "1",
+        "other_subscriber_last_name_103": "SMITH",
+        "other_subscriber_first_name_104": "JOHN",
+        "other_subscriber_middle_name_or_initial_105": "A",
+        "name_prefix_106": null,
+        "other_subscriber_name_suffix_107": null,
+        "identification_code_qualifier_108": "MI",
+        "other_subscriber_identifier_109": "MEM001"
+      },
+      "statement_from_or_to_date_DTM": [
+        {
+          "date_time_qualifier_01": "232",
+          "service_date_02": "2025-09-20"
+        },
+        {
+          "date_time_qualifier_01": "233",
+          "service_date_02": "2025-09-20"
+        }
+      ],
+      "claim_supplemental_information_AMT": {
+        "amount_qualifier_code_01": null,
+        "service_supplemental_amount_02": 800.0
+      }
+    }
+  },
+  "transaction_type": "835"
+}

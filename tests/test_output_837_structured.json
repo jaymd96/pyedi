@@ -1,0 +1,255 @@
+{
+  "interchange": {
+    "sender_id": "FAMILYHEALTH",
+    "sender_qualifier": "ZZ",
+    "receiver_id": "BCBSIL",
+    "receiver_qualifier": "ZZ",
+    "date": "250925",
+    "time": "0800",
+    "control_number": "837000001",
+    "version": "00501",
+    "test_indicator": "P"
+  },
+  "functional_group": {
+    "functional_id": "HC",
+    "sender_code": "FAMILYHEALTH",
+    "receiver_code": "BCBSIL",
+    "date": "20250925",
+    "time": "0800",
+    "control_number": "1",
+    "version": "005010X222A1"
+  },
+  "heading": {
+    "transaction_set_header_loop": {
+      "transaction_set_header_ST": {
+        "transaction_set_identifier_code_01": "837",
+        "transaction_set_control_number_02": "0001",
+        "implementation_convention_reference_03": "005010X222A1"
+      }
+    },
+    "beginning_of_hierarchical_transaction_loop": {
+      "beginning_of_hierarchical_transaction_BHT": {
+        "hierarchical_structure_code_01": "0019",
+        "transaction_set_purpose_code_02": "00",
+        "originator_application_transaction_identifier_03": "123456",
+        "transaction_set_creation_date_04": "2025-09-25",
+        "transaction_set_creation_time_05": "08:00",
+        "claim_or_encounter_identifier_06": null
+      }
+    },
+    "submitter_NM1_loop": {
+      "submitter_name_NM1": {
+        "entity_identifier_code_101": "41",
+        "entity_type_qualifier_102": "2",
+        "ambulance_dropoff_location_103": "FAMILY HEALTH CLINIC",
+        "name_first_104": null,
+        "name_middle_105": null,
+        "name_prefix_106": null,
+        "name_suffix_107": null,
+        "identification_code_qualifier_108": "46",
+        "identification_code_109": "1234567890"
+      },
+      "submitter_edi_contact_information_PER": {
+        "contact_function_code_01": "IC",
+        "ordering_provider_contact_name_02": "BILLING DEPT",
+        "communication_number_qualifier_03": "TE",
+        "communication_number_04": "5555551234"
+      }
+    },
+    "receiver_NM1_loop": {
+      "receiver_name_NM1": {
+        "entity_identifier_code_101": "40",
+        "entity_type_qualifier_102": "2",
+        "ambulance_dropoff_location_103": "BLUE CROSS BLUE SHIELD IL",
+        "name_first_104": null,
+        "name_middle_105": null,
+        "name_prefix_106": null,
+        "name_suffix_107": null,
+        "identification_code_qualifier_108": "46",
+        "identification_code_109": "BCBSIL"
+      }
+    }
+  },
+  "detail": {
+    "billing_provider_hierarchical_level_loop": {
+      "billing_provider_hierarchical_level_HL": {
+        "hierarchical_id_number_01": "1",
+        "hierarchical_parent_id_number_02": null,
+        "hierarchical_level_code_03": "20",
+        "hierarchical_child_code_04": "1"
+      }
+    },
+    "billing_provider_NM1_loop": {
+      "billing_provider_name_NM1": {
+        "entity_identifier_code_101": "85",
+        "entity_type_qualifier_102": "2",
+        "ambulance_dropoff_location_103": "FAMILY HEALTH CLINIC",
+        "name_first_104": null,
+        "name_middle_105": null,
+        "name_prefix_106": null,
+        "name_suffix_107": null,
+        "identification_code_qualifier_108": "XX",
+        "identification_code_109": "1234567890"
+      },
+      "billing_provider_address_N3": {
+        "ambulance_dropoff_address_line_301": "456 MEDICAL CENTER DR"
+      },
+      "billing_provider_city_state_zip_code_N4": {
+        "ambulance_dropoff_city_name_401": "CHICAGO",
+        "ambulance_dropoff_state_or_province_code_402": "IL",
+        "ambulance_dropoff_postal_zone_or_zip_code_403": "60601"
+      },
+      "billing_provider_tax_identification_REF": {
+        "reference_identification_qualifier_01": "EI",
+        "referring_provider_secondary_identifier_02": "987654321"
+      }
+    },
+    "subscriber_hierarchical_level_loop": {
+      "subscriber_hierarchical_level_HL": {
+        "hierarchical_id_number_01": "2",
+        "hierarchical_parent_id_number_02": "1",
+        "hierarchical_level_code_03": "22",
+        "hierarchical_child_code_04": "1"
+      },
+      "subscriber_information_SBR": {
+        "payer_responsibility_sequence_number_code_01": "P",
+        "individual_relationship_code_02": null,
+        "insured_group_or_policy_number_03": null,
+        "other_insured_group_name_04": null,
+        "insurance_type_code_05": null,
+        "coordination_of_benefits_code_06": null,
+        "yes_no_condition_or_response_code_07": null,
+        "employment_status_code_08": null,
+        "claim_filing_indicator_code_09": "CI"
+      }
+    },
+    "insured_or_subscriber_NM1_loop": {
+      "subscriber_name_NM1": {
+        "entity_identifier_code_101": "IL",
+        "entity_type_qualifier_102": "1",
+        "ambulance_dropoff_location_103": "DOE",
+        "name_first_104": "JANE",
+        "name_middle_105": null,
+        "name_prefix_106": null,
+        "name_suffix_107": null,
+        "identification_code_qualifier_108": "MI",
+        "identification_code_109": "SUB123456"
+      },
+      "subscriber_address_N3": {
+        "ambulance_dropoff_address_line_301": "789 PATIENT ST"
+      },
+      "subscriber_city_state_zip_code_N4": {
+        "ambulance_dropoff_city_name_401": "CHICAGO",
+        "ambulance_dropoff_state_or_province_code_402": "IL",
+        "ambulance_dropoff_postal_zone_or_zip_code_403": "60602"
+      },
+      "subscriber_demographic_information_DMG": {
+        "date_time_period_format_qualifier_01": "D8",
+        "patient_birth_date_02": "1980-05-15",
+        "patient_gender_code_03": "F"
+      }
+    },
+    "patient_hierarchical_level_loop": {
+      "patient_hierarchical_level_HL": {
+        "hierarchical_id_number_01": "3",
+        "hierarchical_parent_id_number_02": "2",
+        "hierarchical_level_code_03": "23",
+        "hierarchical_child_code_04": "0"
+      },
+      "patient_information": {
+        "individual_relationship_code_01": "19"
+      }
+    },
+    "patient_NM1_loop": {
+      "patient_name_NM1": {
+        "entity_identifier_code_101": "QC",
+        "entity_type_qualifier_102": "1",
+        "ambulance_dropoff_location_103": "DOE",
+        "name_first_104": "JANE"
+      },
+      "patient_address_N3": {
+        "ambulance_dropoff_address_line_301": "789 PATIENT ST"
+      },
+      "patient_city_state_zip_code_N4": {
+        "ambulance_dropoff_city_name_401": "CHICAGO",
+        "ambulance_dropoff_state_or_province_code_402": "IL",
+        "ambulance_dropoff_postal_zone_or_zip_code_403": "60602"
+      }
+    },
+    "claim_information_loop": {
+      "claim_information_CLM": {
+        "patient_control_number_01": "CLAIM789",
+        "total_claim_charge_amount_02": 350.0,
+        "claim_filing_indicator_code_03": null,
+        "non_institutional_claim_type_code_04": null,
+        "health_care_service_location_information_05": [
+          "11",
+          "B",
+          "1"
+        ],
+        "provider_or_supplier_signature_indicator_06": "Y",
+        "assignment_or_plan_participation_code_07": "A",
+        "benefits_assignment_certification_indicator_08": "Y",
+        "release_of_information_code_09": "Y"
+      }
+    },
+    "dtp": [
+      {
+        "date_time_qualifier_01": "434",
+        "date_time_period_format_qualifier_02": "RD8",
+        "adjudication_or_payment_date_03": "20250920-20250920"
+      },
+      {
+        "date_time_qualifier_01": "472",
+        "date_time_period_format_qualifier_02": "D8",
+        "adjudication_or_payment_date_03": "2025-09-20"
+      },
+      {
+        "date_time_qualifier_01": "472",
+        "date_time_period_format_qualifier_02": "D8",
+        "adjudication_or_payment_date_03": "2025-09-20"
+      }
+    ],
+    "hi": {
+      "hi01_01": [
+        "ABK",
+        "I10"
+      ]
+    },
+    "lx": [
+      {
+        "assigned_number_01": "1"
+      },
+      {
+        "assigned_number_01": "2"
+      }
+    ],
+    "sv1": [
+      {
+        "sv101_101": [
+          "HC",
+          "99213"
+        ],
+        "line_item_charge_amount_102": 150.0,
+        "unit_or_basis_for_measurement_code_103": "UN",
+        "service_unit_count_104": 1,
+        "place_of_service_code_105": null,
+        "service_type_code_106": null,
+        "sv107_107": "1"
+      },
+      {
+        "sv101_101": [
+          "HC",
+          "85025"
+        ],
+        "line_item_charge_amount_102": 50.0,
+        "unit_or_basis_for_measurement_code_103": "UN",
+        "service_unit_count_104": 1,
+        "place_of_service_code_105": null,
+        "service_type_code_106": null,
+        "sv107_107": "1"
+      }
+    ]
+  },
+  "transaction_type": "837"
+}
