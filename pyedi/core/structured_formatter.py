@@ -19,6 +19,7 @@ import re
 
 from ..code_sets import edi_codes as codes
 from .map_loader import MapElementLoader
+from .segment_handlers import SegmentHandlers
 
 
 class StructuredFormatter:
@@ -293,9 +294,45 @@ class StructuredFormatter:
         # Get transaction type from the root context if available
         transaction_type = getattr(self, '_current_transaction_type', None)
 
-        # SPECIAL HANDLING FOR HI SEGMENT (Diagnosis codes)
+        # SPECIAL HANDLING FOR COMPLEX SEGMENTS
+        # These segments have composite elements or special structure requiring custom parsing
+
         if seg_id == 'HI':
+            # Diagnosis codes segment
             return self._format_hi_segment(elements)
+        elif seg_id == 'BPR':
+            # 835 Payment information
+            return SegmentHandlers.handle_bpr_segment(elements)
+        elif seg_id == 'TRN':
+            # 835 Trace/Check number
+            return SegmentHandlers.handle_trn_segment(elements)
+        elif seg_id == 'CLP':
+            # 835 Claim payment information
+            return SegmentHandlers.handle_clp_segment(elements)
+        elif seg_id == 'CAS':
+            # Claim adjustment segment
+            return SegmentHandlers.handle_cas_segment(elements)
+        elif seg_id == 'SVC':
+            # 835 Service payment information
+            return SegmentHandlers.handle_svc_segment(elements)
+        elif seg_id == 'AMT':
+            # Amount segment with qualifier
+            return SegmentHandlers.handle_amt_segment(elements)
+        elif seg_id == 'QTY':
+            # Quantity segment with qualifier
+            return SegmentHandlers.handle_qty_segment(elements)
+        elif seg_id == 'CLM':
+            # 837 Claim information with composite facility code
+            return SegmentHandlers.handle_clm_segment(elements)
+        elif seg_id == 'PWK':
+            # Paperwork/Attachment segment
+            return SegmentHandlers.handle_pwk_segment(elements)
+        elif seg_id == 'TS3':
+            # 835 Provider summary
+            return SegmentHandlers.handle_ts3_segment(elements)
+        elif seg_id == 'RDM':
+            # 835 Remittance delivery method
+            return SegmentHandlers.handle_rdm_segment(elements)
 
         for elem_id, elem_data in elements.items():
             # Extract position number from element ID (e.g., 'BGN01' -> '01')

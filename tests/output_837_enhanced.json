@@ -1,0 +1,309 @@
+{
+  "interchange": {
+    "sender_id": "123456789012345",
+    "sender_qualifier": "ZZ",
+    "receiver_id": "123456789012346",
+    "receiver_qualifier": "ZZ",
+    "date": "061015",
+    "time": "1705",
+    "control_number": "000010216",
+    "version": "00501",
+    "test_indicator": "T"
+  },
+  "functional_group": {
+    "functional_id": "HC",
+    "sender_code": "1234567890",
+    "receiver_code": "9876543210",
+    "date": "20061015",
+    "time": "1705",
+    "control_number": "20213",
+    "version": "005010X222A1"
+  },
+  "heading": {
+    "transaction_set_header_loop": {
+      "transaction_set_header_ST": {
+        "transaction_set_identifier_code": "837",
+        "transaction_set_control_number_02": "0031",
+        "implementation_convention_reference_03": "005010X222"
+      }
+    },
+    "beginning_of_hierarchical_transaction_loop": {
+      "beginning_of_hierarchical_transaction_BHT": {
+        "hierarchical_structure_code": "0019",
+        "transaction_set_purpose_code": "00",
+        "originator_application_transaction_identifier": "0031",
+        "transaction_set_creation_date": "2006-10-15",
+        "transaction_set_creation_time_05": "10:23",
+        "claim_or_encounter_identifier": null
+      }
+    },
+    "submitter_NM1_loop": [
+      {
+        "submitter_name_NM1": [
+          {
+            "entity_identifier_code": "41",
+            "entity_type_qualifier": "2",
+            "submitter_name": "PREMIER BILLING SERVICE",
+            "first_name": null,
+            "middle_name": null,
+            "submitter_prefix": null,
+            "submitter_suffix": null,
+            "submitter_id_qualifier": "46",
+            "submitter_id": "TGJ23"
+          }
+        ],
+        "submitter_edi_contact_information_PER": [
+          {
+            "contact_function_code": "IC",
+            "ordering_provider_contact_name": "JERRY",
+            "communication_number_qualifier_03": "TE",
+            "communication_number_04": "3055552222",
+            "communication_number_qualifier_05": "EX",
+            "communication_number_06": "231"
+          }
+        ]
+      }
+    ],
+    "receiver_NM1_loop": [
+      {
+        "receiver_name_NM1": [
+          {
+            "entity_identifier_code": "40",
+            "entity_type_qualifier": "2",
+            "receiver_name": "KEY INSURANCE COMPANY",
+            "first_name": null,
+            "middle_name": null,
+            "receiver_prefix": null,
+            "receiver_suffix": null,
+            "receiver_id_qualifier": "46",
+            "receiver_id": "66783JJT"
+          }
+        ]
+      }
+    ]
+  },
+  "detail": {
+    "billing_provider_hierarchical_level_loop": [
+      {
+        "billing_provider_hierarchical_level_HL": {
+          "hierarchical_id_number": "1",
+          "hierarchical_parent_id_number_02": null,
+          "hierarchical_level_code": "20",
+          "hierarchical_child_code": "1"
+        },
+        "billing_provider_specialty_information_PRV": {
+          "provider_code": "BI",
+          "reference_identification_qualifier_02": "PXC",
+          "provider_taxonomy_code": "203BF0100Y"
+        }
+      }
+    ],
+    "billing_provider_NM1_loop": {
+      "billing_provider_name_NM1": [
+        {
+          "entity_identifier_code": "85",
+          "entity_type_qualifier": "2",
+          "billing_provider_name": "BEN KILDARE SERVICE",
+          "first_name": null,
+          "middle_name": null,
+          "billing_provider_prefix": null,
+          "billing_provider_suffix": null,
+          "billing_provider_id_qualifier": "XX",
+          "billing_provider_id": "9876543210"
+        }
+      ],
+      "billing_provider_address_N3": {
+        "billing_provider_address_line_1": "234 SEAWAY ST"
+      },
+      "billing_provider_city_state_zip_code_N4": {
+        "billing_provider_city": "MIAMI",
+        "billing_provider_state": "FL",
+        "billing_provider_zip_code": "33111"
+      },
+      "billing_provider_tax_identification_REF": [
+        {
+          "employer_id": "587654321"
+        },
+        {
+          "state_license_number": "654321"
+        }
+      ],
+      "billing_provider_contact_information_PER": [
+        {
+          "contact_function_code": "IC",
+          "ordering_provider_contact_name": "JOHN SMITH",
+          "communication_number_qualifier_03": "TE",
+          "communication_number_04": "5555551234",
+          "communication_number_qualifier_05": "EX",
+          "communication_number_06": "123"
+        }
+      ]
+    },
+    "payto_provider_NM1_loop": {
+      "payto_address_name_NM1": [
+        {
+          "entity_identifier_code": "87",
+          "entity_type_qualifier": "2"
+        }
+      ],
+      "payto_address_address_N3": {
+        "pay_to_provider_address_line_1": "235 SEAWAY ST"
+      },
+      "payto_address_city_state_zip_code_N4": {
+        "pay_to_provider_city": "MAIMI",
+        "pay_to_provider_state": "FL",
+        "pay_to_provider_zip_code": "33111"
+      }
+    },
+    "payee_NM1_loop": {
+      "payto_plan_name_NM1": [
+        {
+          "entity_identifier_code": "PE",
+          "entity_type_qualifier": "2",
+          "payee_name": "PLAN TO PAY TO",
+          "first_name": null,
+          "middle_name": null,
+          "payee_prefix": null,
+          "payee_suffix": null,
+          "payee_id_qualifier": "XX",
+          "payee_id": "PTP123"
+        }
+      ],
+      "payto_plan_address_N3": {
+        "payee_address_line_1": "236 SEAWAY ST"
+      },
+      "payto_plan_city_state_zip_code_N4": {
+        "payee_city": "MIAMI",
+        "payee_state": "FL",
+        "payee_zip_code": "33111"
+      },
+      "payto_plan_secondary_identification_REF": [
+        {
+          "reference_qualifier": "FY",
+          "reference_value": "587654321"
+        }
+      ]
+    },
+    "subscriber_hierarchical_level_loop": [
+      {
+        "subscriber_hierarchical_level_HL": {
+          "hierarchical_id_number": "2",
+          "hierarchical_parent_id_number_02": "1",
+          "hierarchical_level_code": "22",
+          "hierarchical_child_code": "1"
+        },
+        "subscriber_information_SBR": {
+          "payer_responsibility_sequence_number_code": "P",
+          "individual_relationship_code": null,
+          "insured_group_or_policy_number_03": "2222-SJ",
+          "other_insured_group_name": null,
+          "insurance_type_code": null,
+          "coordination_of_benefits_code": null,
+          "yes_no_condition_or_response_code": null,
+          "employment_status_code": null,
+          "claim_filing_indicator_code": "CI"
+        },
+        "patient_information": {
+          "individual_relationship_code": null,
+          "patient_location_code": null,
+          "employment_status_code": null,
+          "student_status_code": null,
+          "date_time_period_format_qualifier": "D8",
+          "patient_death_date": "1990-02-01",
+          "unit_or_basis_for_measurement_code": "01",
+          "patient_weight_08": "176",
+          "pregnancy_indicator_09": "N"
+        }
+      }
+    ],
+    "insured_or_subscriber_NM1_loop": {
+      "subscriber_name_NM1": [
+        {
+          "entity_identifier_code": "IL",
+          "entity_type_qualifier": "1",
+          "insured_last_name": "SMITH",
+          "insured_first_name": "JANE",
+          "insured_middle_name": null,
+          "insured_prefix": null,
+          "insured_suffix": null,
+          "insured_id_qualifier": "MI",
+          "insured_id": "JS00111223333"
+        }
+      ],
+      "subscriber_address_N3": {
+        "insured_address_line_1": "236 N MAIN ST"
+      },
+      "subscriber_city_state_zip_code_N4": {
+        "insured_city": "MIAMI",
+        "insured_state": "FL",
+        "insured_zip_code": "33413"
+      },
+      "subscriber_demographic_information_DMG": [
+        {
+          "date_time_period_format_qualifier": "D8",
+          "patient_birth_date": "1943-05-01",
+          "patient_gender_code": "F"
+        }
+      ],
+      "subscriber_secondary_identification_REF": [
+        {
+          "social_security_number": "123450000"
+        }
+      ]
+    },
+    "payer_NM1_loop": {
+      "payer_name_NM1": [
+        {
+          "entity_identifier_code": "PR",
+          "entity_type_qualifier": "2",
+          "payer_name": "KEY INSURANCECOMPANY",
+          "first_name": null,
+          "middle_name": null,
+          "payer_prefix": null,
+          "payer_suffix": null,
+          "payer_id_qualifier": "PI",
+          "payer_id": "999996666"
+        }
+      ],
+      "payer_address_N3": {
+        "payer_address_line_1": "P.O. BOX 569008"
+      },
+      "payer_city_state_zip_code_N4": {
+        "payer_city": "MIAMI",
+        "payer_state": "FL",
+        "payer_zip_code": "332560000"
+      },
+      "payer_secondary_identification_REF": [
+        {
+          "employer_id": "435261708"
+        },
+        {
+          "reference_qualifier": "G2",
+          "reference_value": "12345"
+        }
+      ]
+    },
+    "patient_hierarchical_level_loop": [
+      {
+        "patient_hierarchical_level_HL": {
+          "hierarchical_id_number": "3",
+          "hierarchical_parent_id_number_02": "2",
+          "hierarchical_level_code": "23",
+          "hierarchical_child_code": "0"
+        },
+        "patient_information": {
+          "individual_relationship_code": "19",
+          "patient_location_code": null,
+          "employment_status_code": null,
+          "student_status_code": null,
+          "date_time_period_format_qualifier": "D8",
+          "patient_death_date": "1997-03-14",
+          "unit_or_basis_for_measurement_code": "01",
+          "patient_weight_08": "156",
+          "pregnancy_indicator_09": "N"
+        }
+      }
+    ]
+  },
+  "transaction_type": "837"
+}

@@ -1,0 +1,522 @@
+{
+  "interchange": {
+    "sender_id": "ABCPAYER",
+    "sender_qualifier": "ZZ",
+    "receiver_id": "ABCPAYER",
+    "receiver_qualifier": "ZZ",
+    "date": "190827",
+    "time": "0212",
+    "control_number": "191511902",
+    "version": "00501",
+    "test_indicator": "P"
+  },
+  "functional_group": {
+    "functional_id": "HP",
+    "sender_code": "ABCD",
+    "receiver_code": "ABCD",
+    "date": "20190827",
+    "time": "12345678",
+    "control_number": "12345678",
+    "version": "005010X221A1"
+  },
+  "heading": {
+    "transaction_set_header_loop": {
+      "transaction_set_header_ST": {
+        "transaction_set_identifier_code": "835",
+        "transaction_set_control_number_02": "35681"
+      }
+    },
+    "financial_information_loop": {
+      "financial_information_BPR": {
+        "transaction_handling_code": "I",
+        "transaction_handling": "Remittance Information Only",
+        "total_payment_amount": 132.0,
+        "credit_debit_flag": "C",
+        "credit_debit": "Credit",
+        "payment_method_code": "CHK",
+        "payment_method": "Check",
+        "payer_account_field_15": "456",
+        "payment_date": "2019-03-31"
+      },
+      "reassociation_trace_number_TRN": {
+        "trace_type_code": "1",
+        "check_eft_trace_number": "12345",
+        "payer_identifier": "1512345678"
+      },
+      "production_date_DTM": [
+        {
+          "date_qualifier": "405",
+          "date_format": "2019-03-14"
+        }
+      ]
+    },
+    "ref": [
+      {
+        "reference_qualifier": "EV",
+        "reference_value": "CLEARINGHOUSE"
+      },
+      {
+        "payer_id": "0101"
+      },
+      {
+        "reference_qualifier": "HI",
+        "reference_value": "0202"
+      },
+      {
+        "reference_qualifier": "PQ",
+        "reference_value": "0505"
+      },
+      {
+        "federal_tax_id": "050595"
+      }
+    ],
+    "n1": [
+      {
+        "entity_identifier_code": "PR",
+        "name": "DELTA DENTAL OF ABC"
+      },
+      {
+        "entity_identifier_code": "PE",
+        "name": "BAN DDS LLC",
+        "id_qualifier": "FI",
+        "identifier": "999994703"
+      }
+    ]
+  },
+  "detail": {
+    "n3": [
+      {
+        "payee_address_line_1": "225 MAIN STREET"
+      },
+      {
+        "payee_address_line_1": "225 MAIN STREET"
+      }
+    ],
+    "n4": [
+      {
+        "payee_city": "CENTERVILLE",
+        "payee_state": "PA",
+        "payee_zip_code": "17111"
+      },
+      {
+        "payee_city": "CENTERVILLE",
+        "payee_state": "PA",
+        "payee_zip_code": "17111"
+      }
+    ],
+    "per": [
+      {
+        "contact_function_code": "BL",
+        "claim_contact_name": "JANE DOE",
+        "communication_number_qualifier_03": "TE",
+        "claim_contact_communications_number_04": "9005555555",
+        "communication_number_qualifier_05": "EX",
+        "claim_contact_communications_number_06": "123"
+      },
+      {
+        "contact_function_code": "IC",
+        "claim_contact_name": null,
+        "communication_number_qualifier_03": "UR",
+        "claim_contact_communications_number_04": "myplan.com/policies"
+      }
+    ],
+    "rdm": {
+      "report_transmission_code": "BM",
+      "name": "Name",
+      "communication_number": "9618215141"
+    },
+    "lx": [
+      {
+        "assigned_number": "1"
+      }
+    ],
+    "ts3": {
+      "provider_identifier": "1851038194",
+      "facility_code": "11",
+      "facility_type": "Office",
+      "fiscal_period_date": "2023-12-31",
+      "total_claim_count": 4,
+      "total_claim_charge_amount": 29310.0
+    },
+    "clp": {
+      "patient_control_number": "7722337",
+      "claim_status_code": "1",
+      "claim_status": "Processed as Primary",
+      "total_charge_amount": 226.0,
+      "total_payment_amount": 132.0,
+      "patient_responsibility_amount": 10.0,
+      "claim_filing_code": "12",
+      "claim_filing": "Preferred Provider Organization (PPO)",
+      "payer_claim_control_number": "119932404007801",
+      "facility_code": "11",
+      "facility_type": "Office",
+      "claim_frequency_code": "1",
+      "patient_status_code": "",
+      "drg_code": "025",
+      "drg_weight": 0.5,
+      "discharge_fraction": 0.4
+    },
+    "cas": [
+      {
+        "adjustment_group_code": "CO",
+        "adjustment_group": "Contractual Obligations",
+        "adjustments": [
+          {
+            "reason_code": "197",
+            "reason": "Precertification/authorization/notification absent",
+            "amount": 2000.0,
+            "quantity": 1.0
+          }
+        ]
+      },
+      {
+        "adjustment_group_code": "PR",
+        "adjustment_group": "Patient Responsibility",
+        "adjustments": [
+          {
+            "reason_code": "132",
+            "reason": "Prearranged demonstration project adjustment",
+            "amount": 259.0
+          }
+        ]
+      },
+      {
+        "adjustment_group_code": "CO",
+        "adjustment_group": "Contractual Obligations",
+        "adjustments": [
+          {
+            "reason_code": "131",
+            "reason": "Claim specific negotiated discount",
+            "amount": 21.0
+          }
+        ]
+      },
+      {
+        "adjustment_group_code": "CO",
+        "adjustment_group": "Contractual Obligations",
+        "adjustments": [
+          {
+            "reason_code": "131",
+            "reason": "Claim specific negotiated discount",
+            "amount": 11.0
+          }
+        ]
+      },
+      {
+        "adjustment_group_code": "CO",
+        "adjustment_group": "Contractual Obligations",
+        "adjustments": [
+          {
+            "reason_code": "131",
+            "reason": "Claim specific negotiated discount",
+            "amount": 12.0
+          }
+        ]
+      },
+      {
+        "adjustment_group_code": "CO",
+        "adjustment_group": "Contractual Obligations",
+        "adjustments": [
+          {
+            "reason_code": "131",
+            "reason": "Claim specific negotiated discount",
+            "amount": 26.0
+          }
+        ]
+      },
+      {
+        "adjustment_group_code": "CO",
+        "adjustment_group": "Contractual Obligations",
+        "adjustments": [
+          {
+            "reason_code": "131",
+            "reason": "Claim specific negotiated discount",
+            "amount": 24.0
+          }
+        ]
+      },
+      {
+        "adjustment_group_code": "OA",
+        "adjustment_group": "Other Adjustments",
+        "adjustments": [
+          {
+            "reason_code": "131",
+            "reason": "Claim specific negotiated discount",
+            "amount": 27.0
+          }
+        ]
+      }
+    ],
+    "nm1": [
+      {
+        "entity_identifier_code": "QC",
+        "entity_type_qualifier": "1",
+        "patient_last_name": "DOE",
+        "patient_first_name": "SALLY"
+      },
+      {
+        "entity_identifier_code": "IL",
+        "entity_type_qualifier": "1",
+        "insured_last_name": "DOE",
+        "insured_first_name": "John",
+        "insured_middle_name": null,
+        "insured_prefix": null,
+        "insured_suffix": null,
+        "insured_id_qualifier": "MI",
+        "insured_id": "SJD11111"
+      },
+      {
+        "entity_identifier_code": "74",
+        "entity_type_qualifier": "1",
+        "name": "Due",
+        "first_name": null,
+        "middle_name": null,
+        "prefix": null,
+        "suffix": null,
+        "id_qualifier": "C",
+        "identifier": "SJD999"
+      },
+      {
+        "entity_identifier_code": "82",
+        "entity_type_qualifier": "1",
+        "rendering_provider_last_name": "BAN",
+        "rendering_provider_first_name": "ERIN",
+        "rendering_provider_middle_name": null,
+        "rendering_provider_prefix": null,
+        "rendering_provider_suffix": null,
+        "rendering_provider_id_qualifier": "XX",
+        "rendering_provider_id": "1811901945"
+      },
+      {
+        "entity_identifier_code": "TT",
+        "entity_type_qualifier": "1",
+        "name": "ACME INSURANCE",
+        "first_name": null,
+        "middle_name": null,
+        "prefix": null,
+        "suffix": null,
+        "id_qualifier": "XV",
+        "identifier": "9876"
+      },
+      {
+        "entity_identifier_code": "PR",
+        "entity_type_qualifier": "2",
+        "payer_name": "ACME INSURANCE",
+        "first_name": null,
+        "middle_name": null,
+        "payer_prefix": null,
+        "payer_suffix": null,
+        "payer_id_qualifier": "XV",
+        "payer_id": "8765"
+      },
+      {
+        "entity_identifier_code": "GB",
+        "entity_type_qualifier": "1",
+        "name": "Smith",
+        "first_name": "Jane"
+      }
+    ],
+    "ref": [
+      {
+        "original_reference_number": "12345"
+      },
+      {
+        "medical_record_number": "12345"
+      },
+      {
+        "medicare_provider_id": "12345678"
+      },
+      {
+        "reference_qualifier": "RB",
+        "reference_value": "100"
+      },
+      {
+        "ambulatory_patient_group": "101"
+      },
+      {
+        "reference_qualifier": "APC",
+        "reference_value": "102"
+      },
+      {
+        "provider_control_number": "A123"
+      },
+      {
+        "health_plan_id": "P123"
+      },
+      {
+        "medicare_provider_id": "P234"
+      },
+      {
+        "policy_number": "1234\"5"
+      }
+    ],
+    "amt": [
+      {
+        "amount_qualifier": "AU",
+        "amount_type": "Coverage Amount",
+        "amount": 132.0
+      },
+      {
+        "amount_qualifier": "D8",
+        "amount_type": "Discount Amount",
+        "amount": 100.0
+      },
+      {
+        "amount_qualifier": "B6",
+        "amount_type": "Allowed - Actual",
+        "amount": 25.0
+      },
+      {
+        "amount_qualifier": "B6",
+        "amount_type": "Allowed - Actual",
+        "amount": 14.0
+      },
+      {
+        "amount_qualifier": "B6",
+        "amount_type": "Allowed - Actual",
+        "amount": 10.0
+      },
+      {
+        "amount_qualifier": "B6",
+        "amount_type": "Allowed - Actual",
+        "amount": 34.0
+      },
+      {
+        "amount_qualifier": "B6",
+        "amount_type": "Allowed - Actual",
+        "amount": 49.0
+      },
+      {
+        "amount_qualifier": "KH",
+        "amount_type": "Deduction Amount",
+        "amount": 50.0
+      }
+    ],
+    "dtm": [
+      {
+        "claim_statement_period_start": "2022-09-15"
+      },
+      {
+        "claim_statement_period_end": "2022-09-16"
+      },
+      {
+        "expiration_date": "2022-10-01"
+      },
+      {
+        "received_date": "2022-11-24"
+      },
+      {
+        "service_date": "2019-03-24"
+      },
+      {
+        "service_date": "2019-03-24"
+      },
+      {
+        "service_date": "2019-03-24"
+      },
+      {
+        "service_date": "2019-03-24"
+      },
+      {
+        "service_date": "2019-03-24"
+      },
+      {
+        "date_qualifier": "150",
+        "date_format": "2019-03-24"
+      },
+      {
+        "date_qualifier": "151",
+        "date_format": "2019-03-25"
+      },
+      {
+        "service_date": "2019-03-24"
+      }
+    ],
+    "qty": [
+      {
+        "quantity_qualifier": "CA",
+        "quantity_type": "Covered - Actual",
+        "quantity": 4.0
+      },
+      {
+        "quantity_qualifier": "ZL",
+        "quantity_type": "Federal Medicare or Medicaid Payment Mandate - Category 2",
+        "quantity": 3.75
+      }
+    ],
+    "svc": [
+      {
+        "procedure_qualifier": "AD",
+        "procedure_code": "D0120",
+        "procedure_modifiers": [
+          "02",
+          "28"
+        ],
+        "line_charge_amount": 46.0,
+        "line_payment_amount": 25.0,
+        "revenue_code": "0022",
+        "revenue_description": "Revenue Code 0022",
+        "units_paid": 3.1,
+        "original_procedure_code": "D0140",
+        "units_original": 3.5
+      },
+      {
+        "procedure_qualifier": "AD",
+        "procedure_code": "D0220",
+        "line_charge_amount": 25.0,
+        "line_payment_amount": 14.0
+      },
+      {
+        "procedure_qualifier": "AD",
+        "procedure_code": "D0230",
+        "line_charge_amount": 22.0,
+        "line_payment_amount": 10.0
+      },
+      {
+        "procedure_qualifier": "AD",
+        "procedure_code": "D0274",
+        "line_charge_amount": 60.0,
+        "line_payment_amount": 34.0
+      },
+      {
+        "procedure_qualifier": "NU",
+        "procedure_code": "0022",
+        "line_charge_amount": 99.0,
+        "line_payment_amount": 59.0,
+        "revenue_code": "",
+        "revenue_description": "Revenue Code ",
+        "units_paid": 1.0,
+        "original_procedure_code": "0023",
+        "units_original": 2.0
+      },
+      {
+        "procedure_qualifier": "AD",
+        "procedure_code": "D1110",
+        "line_charge_amount": 73.0,
+        "line_payment_amount": 49.0
+      },
+      {
+        "procedure_qualifier": "N4",
+        "procedure_code": "00002143481",
+        "line_charge_amount": 60.0,
+        "line_payment_amount": 59.0,
+        "revenue_code": "",
+        "revenue_description": "Revenue Code ",
+        "units_paid": 10.5,
+        "original_procedure_code": "00002143482",
+        "units_original": 9.2
+      }
+    ],
+    "lq": [
+      {
+        "code_list_qualifier_code": "HE",
+        "remark_code": "M1"
+      },
+      {
+        "code_list_qualifier_code": "HE",
+        "remark_code": "M2"
+      }
+    ]
+  },
+  "transaction_type": "835"
+}

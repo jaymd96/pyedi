@@ -685,3 +685,226 @@ def get_gender_description(code: str) -> str:
 def get_claim_filing_description(code: str) -> str:
     """Get description for claim filing indicator code"""
     return CLAIM_FILING_CODES.get(code, f"Filing Code {code}")
+
+
+# Place of Service Codes (CLM-05-1, SVC composite)
+PLACE_OF_SERVICE_CODES = {
+    "01": "Pharmacy",
+    "02": "Telehealth Provided Other than in Patient's Home",
+    "03": "School",
+    "04": "Homeless Shelter",
+    "05": "Indian Health Service Free-standing Facility",
+    "06": "Indian Health Service Provider-based Facility",
+    "07": "Tribal 638 Free-standing Facility",
+    "08": "Tribal 638 Provider-based Facility",
+    "09": "Prison/Correctional Facility",
+    "10": "Telehealth Provided in Patient's Home",
+    "11": "Office",
+    "12": "Home",
+    "13": "Assisted Living Facility",
+    "14": "Group Home",
+    "15": "Mobile Unit",
+    "16": "Temporary Lodging",
+    "17": "Walk-in Retail Health Clinic",
+    "18": "Place of Employment-Worksite",
+    "19": "Off Campus-Outpatient Hospital",
+    "20": "Urgent Care Facility",
+    "21": "Inpatient Hospital",
+    "22": "On Campus-Outpatient Hospital",
+    "23": "Emergency Room – Hospital",
+    "24": "Ambulatory Surgical Center",
+    "25": "Birthing Center",
+    "26": "Military Treatment Facility",
+    "27": "Outreach Site/Street",
+    "31": "Skilled Nursing Facility",
+    "32": "Nursing Facility",
+    "33": "Custodial Care Facility",
+    "34": "Hospice",
+    "41": "Ambulance – Land",
+    "42": "Ambulance – Air or Water",
+    "49": "Independent Clinic",
+    "50": "Federally Qualified Health Center",
+    "51": "Inpatient Psychiatric Facility",
+    "52": "Psychiatric Facility-Partial Hospitalization",
+    "53": "Community Mental Health Center",
+    "54": "Intermediate Care Facility/Individuals with Intellectual Disabilities",
+    "55": "Residential Substance Abuse Treatment Facility",
+    "56": "Psychiatric Residential Treatment Center",
+    "57": "Non-residential Substance Abuse Treatment Facility",
+    "58": "Non-residential Opioid Treatment Facility",
+    "60": "Mass Immunization Center",
+    "61": "Comprehensive Inpatient Rehabilitation Facility",
+    "62": "Comprehensive Outpatient Rehabilitation Facility",
+    "65": "End-Stage Renal Disease Treatment Facility",
+    "71": "Public Health Clinic",
+    "72": "Rural Health Clinic",
+    "81": "Independent Laboratory",
+    "99": "Other Place of Service"
+}
+
+
+# Revenue Codes (SVC-04, service line)
+REVENUE_CODES = {
+    "0001": "Total Charge",
+    "0010": "All-Inclusive Rate",
+    "0100": "General - Room and Board",
+    "0101": "General - Room and Board - Private (One Bed)",
+    "0110": "General - Room and Board - Semi-Private (Two Beds)",
+    "0120": "General - Room and Board - Three and Four Beds",
+    "0130": "General - Room and Board - Deluxe Private",
+    "0140": "General - Room and Board - Private (Medical)",
+    "0150": "General - Room and Board - Ward",
+    "0160": "General - Room and Board - Other",
+    "0190": "General - Room and Board - Subacute Care",
+    "0200": "Intensive Care",
+    "0201": "Intensive Care - Surgical",
+    "0202": "Intensive Care - Medical",
+    "0203": "Intensive Care - Pediatric",
+    "0204": "Intensive Care - Psychiatric",
+    "0206": "Intensive Care - Intermediate ICU",
+    "0209": "Intensive Care - Other",
+    "0210": "Coronary Care",
+    "0300": "Nursery",
+    "0370": "Newborn - Level IV (Neonatal Intensive Care)",
+    "0400": "Operating Room Services",
+    "0450": "Emergency Room",
+    "0500": "Professional Fees",
+    "0510": "Professional Fees - Clinic",
+    "0520": "Professional Fees - Home",
+    "0540": "Professional Fees - Ambulatory Surgical Care",
+    "0550": "Professional Fees - Skilled Nursing",
+    "0600": "General - Other Therapy Services",
+    "0710": "Recovery Room",
+    "0720": "Labor Room/Delivery",
+    "0800": "Inpatient Renal Dialysis",
+    "0900": "Psychiatric/Psychological Treatments",
+    "1000": "General - Other Diagnostic Services",
+    "0250": "Pharmacy",
+    "0260": "IV Therapy",
+    "0270": "Medical/Surgical Supplies and Devices",
+    "0280": "Oncology",
+    "0290": "Durable Medical Equipment",
+    "0300": "Laboratory"
+}
+
+
+# Amount/Quantity Qualifier Codes (AMT-01, QTY-01)
+AMOUNT_QUALIFIER_CODES = {
+    "AU": "Coverage Amount",
+    "B6": "Allowed - Actual",
+    "D": "Payor Amount Paid",
+    "D8": "Discount Amount",
+    "EAF": "Amount Owed",
+    "F5": "Patient Amount Paid",
+    "I": "Interest",
+    "KH": "Deduction Amount",
+    "NL": "Negative Ledger Balance",
+    "T": "Tax",
+    "T2": "Total Claim Before Taxes",
+    "ZK": "Federal Medicare or Medicaid Payment Mandate - Category 1",
+    "ZL": "Federal Medicare or Medicaid Payment Mandate - Category 2",
+    "ZM": "Federal Medicare or Medicaid Payment Mandate - Category 3",
+    "ZN": "Federal Medicare or Medicaid Payment Mandate - Category 4",
+    "ZO": "Federal Medicare or Medicaid Payment Mandate - Category 5"
+}
+
+QUANTITY_QUALIFIER_CODES = {
+    "CA": "Covered - Actual",
+    "CD": "Covered Days",
+    "LA": "Lifelong Reserve Actual",
+    "LE": "Lifelong Reserve Estimated",
+    "NA": "Non-covered Actual",
+    "NE": "Non-covered Estimated",
+    "NR": "Not Replaced Blood Units",
+    "OU": "Outlier Days",
+    "PS": "Prescription",
+    "PT": "Patients",
+    "QA": "Quantity Approved",
+    "QC": "Quantity Disapproved",
+    "VS": "Visits",
+    "ZK": "Federal Medicare or Medicaid Payment Mandate - Category 1",
+    "ZL": "Federal Medicare or Medicaid Payment Mandate - Category 2",
+    "ZM": "Federal Medicare or Medicaid Payment Mandate - Category 3",
+    "ZN": "Federal Medicare or Medicaid Payment Mandate - Category 4",
+    "ZO": "Federal Medicare or Medicaid Payment Mandate - Category 5"
+}
+
+
+# Remark Codes (SVC segment, remittance advice remark)
+REMARK_CODES = {
+    "M1": "X-ray not taken within the past 12 months or near enough to the start of treatment.",
+    "M2": "Not paid separately when the patient is an inpatient.",
+    "M3": "Equipment is the same or similar to equipment already being used.",
+    "M4": "Alert: This is a split service and represents a portion of the units from the originally submitted service.",
+    "M5": "Equipment purchase price exceeds fee schedule.",
+    "M6": "Alert: You may not appeal this decision but can resubmit this claim/service with corrected information if warranted.",
+    "M7": "Alert: The claim information is also being forwarded to the patient's supplemental insurer.",
+    "M8": "Alert: This is a telephone/internet/ or other remote type of consultation.",
+    "M9": "Alert: No Separate Reimbursement - included in the reimbursement issued for other services performed.",
+    "M10": "Equipment is being purchased, but allowed under the rental schedule.",
+    "M11": "DME, orthotics and prosthetics must be billed to the DME carrier who services the patient's zip code.",
+    "M12": "Diagnostic tests performed by a physician must indicate whether purchased services are included on the claim.",
+    "M13": "Only one initial visit per specialty per medical group is covered.",
+    "M14": "No separate payment for an injection administered during an office visit.",
+    "M15": "Separately billed services/tests have been bundled as they are considered components of the same procedure.",
+    "M16": "Alert: Please see our web site, mailings, or bulletins for more details concerning this policy/procedure/decision.",
+    "M17": "Alert: Payment approved as you did not know, and could not reasonably have been expected to know, that this patient was entitled to Medicare.",
+    "M18": "Alert: The claim information is being forwarded to the patient's other insurer.",
+    "M19": "Missing oxygen certification/re-certification.",
+    "M20": "Missing/incomplete/invalid HCPCS.",
+    "M21": "Missing invoice or statement certifying the actual cost of the lens, less discounts, and/or the type of intraocular lens used.",
+    "M22": "Missing/incomplete/invalid number of doses per vial.",
+    "M23": "Missing/incomplete/invalid number of vials.",
+    "M24": "Missing/incomplete/invalid date of last certification.",
+    "M25": "Missing/incomplete/invalid date of oxygen saturation test.",
+    "M26": "Missing/incomplete/invalid test results.",
+    "M27": "Missing/incomplete/invalid oxygen flow rate.",
+    "M28": "Missing/incomplete/invalid arterial blood gas value.",
+    "M29": "Missing certificate of medical necessity.",
+    "M30": "Missing physician order.",
+    "M31": "Missing/incomplete/invalid prescribing physician identifier.",
+    "M32": "Missing/incomplete/invalid prior authorization number.",
+    "M33": "Missing/incomplete/invalid referring provider name.",
+    "M34": "Missing/incomplete/invalid admitting diagnosis.",
+    "M35": "Missing/incomplete/invalid period of time oxygen used.",
+    "M36": "Missing/incomplete/invalid hospital affiliation effective date.",
+    "M37": "Missing/incomplete/invalid hospital affiliation termination date.",
+    "M38": "Missing/incomplete/invalid reason for leaving hospital.",
+    "M39": "Missing/incomplete/invalid blood gas study.",
+    "M40": "Missing/incomplete/invalid frequency of use.",
+    "M41": "Missing/incomplete/invalid duration of use.",
+    "M42": "Missing/incomplete/invalid reason for replacement.",
+    "M43": "Missing/incomplete/invalid ambulance transport reason.",
+    "M44": "Missing/incomplete/invalid round trip purpose description.",
+    "M45": "Missing/incomplete/invalid pick up location.",
+    "M46": "Missing/incomplete/invalid drop off location.",
+    "M47": "Missing/incomplete/invalid destination.",
+    "M48": "Missing/incomplete/invalid weight.",
+    "M49": "Missing/incomplete/invalid mileage.",
+    "M50": "Missing/incomplete/invalid stretcher purpose description."
+}
+
+
+def get_place_of_service_description(code: str) -> str:
+    """Get description for place of service code"""
+    return PLACE_OF_SERVICE_CODES.get(code, f"Place of Service {code}")
+
+
+def get_revenue_code_description(code: str) -> str:
+    """Get description for revenue code"""
+    return REVENUE_CODES.get(code, f"Revenue Code {code}")
+
+
+def get_amount_qualifier_description(code: str) -> str:
+    """Get description for amount qualifier code"""
+    return AMOUNT_QUALIFIER_CODES.get(code, f"Amount Qualifier {code}")
+
+
+def get_quantity_qualifier_description(code: str) -> str:
+    """Get description for quantity qualifier code"""
+    return QUANTITY_QUALIFIER_CODES.get(code, f"Quantity Qualifier {code}")
+
+
+def get_remark_code_description(code: str) -> str:
+    """Get description for remark code"""
+    return REMARK_CODES.get(code, f"Remark Code {code}")
